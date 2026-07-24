@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "url": "https://DEINE-DOMAIN.de/api/decision",
+  "headers": {
+    "Authorization": "Bearer {{$env.N8N_INGEST_TOKEN}}",
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "ndxNow": "{{$json.ndxNow}}",
+    "ndxHigh2y": "{{$json.ndxHigh2y}}",
+    "drawdownPercent": "{{$json.drawdownPercent}}",
+    "vixNow": "{{$json.vixNow}}",
+    "vixPercentile": "{{$json.vixPercentile}}",
+    "action": "{{$json.action}}",
+    "severity": "{{$json.severity}}",
+    "recommendation": "{{$json.recommendation}}"
+  }
+}

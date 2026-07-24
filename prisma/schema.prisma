@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Decision {
+  id                     Int      @id @default(autoincrement())
+  createdAt              DateTime @default(now())
+  ndxNow                 Float
+  ndxHigh2y              Float
+  ndxDrawdownPct         Float
+  vixNow                 Float
+  vixPercentile          Float
+  action                 String   @db.VarChar(80)
+  severity               String   @db.VarChar(20)
+  recommendation         String   @db.Text
+  hedgeMarketValueEur    Float?
+  hedgeUnrealizedGainEur Float?
+  notes                  String?  @db.Text
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([severity])
+}
