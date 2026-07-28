@@ -10,7 +10,18 @@ export default async function Home() {
   });
 
   return <Dashboard decisions={decisions.map(d => ({
-    ...d,
-    createdAt: d.createdAt.toISOString()
+    id: d.id,
+    createdAt: d.createdAt.toISOString(),
+    ndxNow: d.ndxNow,
+    ndxHigh2y: d.ndxHigh2y,
+    ndxDrawdownPct: d.ndxDrawdownPct,
+    vixNow: d.vixNow,
+    vixPercentile: d.vixPercentile,
+    action: d.action,
+    severity: d.severity,
+    recommendation: d.recommendation,
+    hedgeMarketValueEur: d.hedgeMarketValueEur?.toNumber() ?? null,
+    hedgeUnrealizedGainEur: d.hedgeUnrealizedGainEur?.toNumber() ?? null,
+    notes: d.notes
   }))} />;
 }
