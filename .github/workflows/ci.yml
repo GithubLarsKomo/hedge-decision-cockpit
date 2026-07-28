@@ -20,11 +20,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - run: npm run prisma:generate
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm test
+      - name: Install dependencies
+        run: npm install --silent
+      - name: Generate Prisma client
+        run: npm run prisma:generate >/dev/null
+      - name: Typecheck
+        run: npm run typecheck >/dev/null
+      - name: Lint
+        run: npm run lint >/dev/null
+      - name: Test
+        run: npm test >/dev/null
       - name: Build
         shell: bash
         run: |
