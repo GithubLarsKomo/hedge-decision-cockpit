@@ -1,22 +1,32 @@
-import { describe, expect, it } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import { evaluateDecision, RULE_VERSION } from './decision-engine';
 
 describe('evaluateDecision', () => {
   it('realisiert bei 30 Prozent Drawdown 25 Prozent', () => {
-    expect(evaluateDecision({ drawdownPercent: -30, vixPercentile: 50 }).action).toBe('REALIZE_25_PERCENT');
+    assert.equal(
+      evaluateDecision({ drawdownPercent: -30, vixPercentile: 50 }).action,
+      'REALIZE_25_PERCENT'
+    );
   });
 
   it('kauft bei hohem VIX keine neuen Puts', () => {
     const result = evaluateDecision({ drawdownPercent: -5, vixPercentile: 90 });
-    expect(result.action).toBe('DO_NOT_BUY_NEW_PUTS');
-    expect(result.triggeredRules).toContain('VIX_EXPENSIVE');
+    assert.equal(result.action, 'DO_NOT_BUY_NEW_PUTS');
+    assert.ok(result.triggeredRules.includes('VIX_EXPENSIVE'));
   });
 
   it('kauft bei vollständiger Hedge-Abdeckung nicht nach', () => {
-    expect(evaluateDecision({ drawdownPercent: -2, vixPercentile: 10, hedgeCoveragePercent: 100 }).action).toBe('HOLD');
+    assert.equal(
+      evaluateDecision({ drawdownPercent: -2, vixPercentile: 10, hedgeCoveragePercent: 100 }).action,
+      'HOLD'
+    );
   });
 
   it('liefert eine Regelversion', () => {
-    expect(evaluateDecision({ drawdownPercent: 0, vixPercentile: 50 }).ruleVersion).toBe(RULE_VERSION);
+    assert.equal(
+      evaluateDecision({ drawdownPercent: 0, vixPercentile: 50 }).ruleVersion,
+      RULE_VERSION
+    );
   });
 });
