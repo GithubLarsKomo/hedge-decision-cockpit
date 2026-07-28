@@ -25,11 +25,19 @@
 - Maximum drawdown comparison and hedge-benefit metric
 - Validation and tests for portfolio economics inputs
 
-## Next: historical data and realistic option economics
+## Completed in v1.4 option pricing foundation
+
+- European call and put valuation with continuous dividend yield
+- Delta, gamma and vega calculation
+- Deterministic expiry and zero-volatility handling
+- Contract multiplier and FX conversion into Euro position values
+- Put-call-parity and boundary tests
+
+## Next: historical data and strategy simulation
 
 1. Import historical NDX, VIX/VXN and option-chain data into immutable market snapshots.
 2. Cover 2000–2002, 2008–2009, 2020, 2022 and later stress periods.
-3. Derive hedge values from premium, spread, slippage, expiry, strike and roll assumptions instead of supplying observed values.
+3. Add bid-ask spread, slippage, expiry selection and scheduled roll rules.
 4. Compare no hedge, long put, put spread, collar and staged realization strategies.
 5. Add explicit target hedge coverage and recommended contract quantities.
 6. Record human approval, actual execution and deviation reasons.
