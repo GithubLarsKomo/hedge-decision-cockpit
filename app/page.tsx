@@ -4,10 +4,16 @@ import Dashboard from '@/components/Dashboard';
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const decisions = await prisma.decision.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 250
-  });
+  let decisions: Awaited<ReturnType<typeof prisma.decision.findMany>> = [];
+
+  try {
+    decisions = await prisma.decision.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 250
+    });
+  } catch (error) {
+    console.error('Could not load decision history', error);
+  }
 
   return <Dashboard decisions={decisions.map(d => ({
     id: d.id,
