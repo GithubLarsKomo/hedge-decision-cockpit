@@ -12,6 +12,19 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: hedge
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     env:
       DATABASE_URL: mysql://root:root@127.0.0.1:3306/hedge
       N8N_INGEST_TOKEN: test-token-for-ci
@@ -24,6 +37,8 @@ jobs:
         run: npm install --silent
       - name: Generate Prisma client
         run: npm run prisma:generate >/dev/null
+      - name: Apply Prisma schema
+        run: npx prisma db push --skip-generate >/dev/null
       - name: Typecheck
         run: npm run typecheck >/dev/null
       - name: Lint
