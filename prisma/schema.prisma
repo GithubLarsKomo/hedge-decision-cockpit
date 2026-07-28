@@ -10,19 +10,52 @@ datasource db {
 model Decision {
   id                     Int      @id @default(autoincrement())
   createdAt              DateTime @default(now())
-  ndxNow                 Float
-  ndxHigh2y              Float
-  ndxDrawdownPct         Float
-  vixNow                 Float
-  vixPercentile          Float
-  action                 String   @db.VarChar(80)
-  severity               String   @db.VarChar(20)
-  recommendation         String   @db.Text
-  hedgeMarketValueEur    Float?
-  hedgeUnrealizedGainEur Float?
-  notes                  String?  @db.Text
+  observedAt             DateTime?
+  source                  String?  @db.VarChar(120)
+  inputFingerprint        String?  @unique @db.VarChar(64)
+  ruleVersion             String   @default("1.0.0") @db.VarChar(30)
+  triggeredRulesJson      Json?
+  ndxNow                  Float
+  ndxHigh2y               Float
+  ndxDrawdownPct          Float
+  vixNow                  Float
+  vixPercentile           Float
+  action                  String   @db.VarChar(80)
+  severity                String   @db.VarChar(20)
+  recommendation          String   @db.Text
+  portfolioMarketValueEur Decimal? @db.Decimal(18, 2)
+  hedgeMarketValueEur     Decimal? @db.Decimal(18, 2)
+  hedgeUnrealizedGainEur  Decimal? @db.Decimal(18, 2)
+  hedgeCoveragePercent    Decimal? @db.Decimal(7, 2)
+  notes                   String?  @db.Text
+  portfolioSnapshot       PortfolioSnapshot?
+  hedgePositionSnapshot   HedgePositionSnapshot?
 
   @@index([createdAt])
+  @@index([observedAt])
   @@index([action])
   @@index([severity])
+}
+
+model PortfolioSnapshot {
+  id                  Int      @id @default(autoincrement())
+  decisionId          Int      @unique
+  createdAt           DateTime @default(now())
+  marketValueEur      Decimal  @db.Decimal(18, 2)
+  targetHedgePercent  Decimal? @db.Decimal(7, 2)
+  decision            Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+}
+
+model HedgePositionSnapshot {
+  id                    Int      @id @default(autoincrement())
+  decisionId            Int      @unique
+  createdAt             DateTime @default(now())
+  underlying            String   @db.VarChar(40)
+  instrumentDescription String?  @db.VarChar(255)
+  quantity              Decimal? @db.Decimal(18, 4)
+  strike                 Decimal? @db.Decimal(18, 4)
+  expiry                 DateTime?
+  marketValueEur         Decimal? @db.Decimal(18, 2)
+  unrealizedGainEur      Decimal? @db.Decimal(18, 2)
+  decision               Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
 }
