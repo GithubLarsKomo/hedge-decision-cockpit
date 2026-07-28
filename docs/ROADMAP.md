@@ -10,10 +10,17 @@
 - Portfolio and hedge-position snapshots
 - Optional dashboard Basic Auth
 
-## Next: backtesting and decision quality
+## Completed in v1.2 backtest foundation
+
+- Validated, versioned strategy configuration instead of hard-coded thresholds
+- Deterministic backtest runner for chronological market observations
+- Action counts, maximum drawdown and rule trace per observation
+- Tests for observation ordering, invalid market data and invalid strategy thresholds
+
+## Next: historical data and realistic hedge economics
 
 1. Import historical NDX, VIX/VXN and option-chain data into immutable market snapshots.
-2. Build a backtest runner covering 2000–2002, 2008–2009, 2020, 2022 and later stress periods.
+2. Cover 2000–2002, 2008–2009, 2020, 2022 and later stress periods.
 3. Model premium, spread, slippage, expiry, strike and roll costs.
 4. Compare no hedge, long put, put spread, collar and staged realization strategies.
 5. Add explicit target hedge coverage and recommended contract quantities.
