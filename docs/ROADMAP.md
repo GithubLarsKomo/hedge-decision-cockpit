@@ -17,11 +17,19 @@
 - Action counts, maximum drawdown and rule trace per observation
 - Tests for observation ordering, invalid market data and invalid strategy thresholds
 
-## Next: historical data and realistic hedge economics
+## Completed in v1.3 portfolio backtest foundation
+
+- Comparison of hedged and unhedged portfolio values in Euro
+- Observed hedge market values and realized hedge cash flows
+- Explicit transaction-cost accounting
+- Maximum drawdown comparison and hedge-benefit metric
+- Validation and tests for portfolio economics inputs
+
+## Next: historical data and realistic option economics
 
 1. Import historical NDX, VIX/VXN and option-chain data into immutable market snapshots.
 2. Cover 2000–2002, 2008–2009, 2020, 2022 and later stress periods.
-3. Model premium, spread, slippage, expiry, strike and roll costs.
+3. Derive hedge values from premium, spread, slippage, expiry, strike and roll assumptions instead of supplying observed values.
 4. Compare no hedge, long put, put spread, collar and staged realization strategies.
 5. Add explicit target hedge coverage and recommended contract quantities.
 6. Record human approval, actual execution and deviation reasons.
