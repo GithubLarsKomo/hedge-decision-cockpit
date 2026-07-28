@@ -1,4 +1,6 @@
-export const RULE_VERSION = '2.0.0';
+import { DEFAULT_STRATEGY_CONFIG, StrategyConfig, validateStrategyConfig } from './strategy-config';
+
+export const RULE_VERSION = DEFAULT_STRATEGY_CONFIG.version;
 
 export type DecisionAction =
   | 'HOLD'
@@ -25,58 +27,66 @@ export type DecisionEngineResult = {
   ruleVersion: string;
 };
 
-export function evaluateDecision(input: DecisionEngineInput): DecisionEngineResult {
+export function evaluateDecision(
+  input: DecisionEngineInput,
+  config: StrategyConfig = DEFAULT_STRATEGY_CONFIG
+): DecisionEngineResult {
+  validateStrategyConfig(config);
   const { drawdownPercent, vixPercentile, hedgeCoveragePercent } = input;
   const triggeredRules: string[] = [];
 
-  if (drawdownPercent <= -50) {
-    triggeredRules.push('DRAWDOWN_50');
+  if (drawdownPercent <= config.drawdownCloseMostPercent) {
+    triggeredRules.push('DRAWDOWN_CLOSE_MOST');
     return {
       action: 'CLOSE_MOST_HEDGE_AND_BUY_EQUITIES', severity: 'red',
-      recommendation: 'NASDAQ mindestens 50 % unter Referenzhoch: Tail-Hedge weitgehend schließen und die freigesetzte Liquidität gemäß Reinvestitionsplan einsetzen.',
-      triggeredRules, ruleVersion: RULE_VERSION
+      recommendation: 'NASDAQ im extremen Drawdown: Tail-Hedge weitgehend schließen und die freigesetzte Liquidität gemäß Reinvestitionsplan einsetzen.',
+      triggeredRules, ruleVersion: config.version
     };
   }
-  if (drawdownPercent <= -40) {
-    triggeredRules.push('DRAWDOWN_40');
+  if (drawdownPercent <= config.drawdownRealizeSecondPercent) {
+    triggeredRules.push('DRAWDOWN_REALIZE_SECOND');
     return {
       action: 'REALIZE_35_PERCENT_MORE', severity: 'orange',
-      recommendation: 'NASDAQ mindestens 40 % unter Referenzhoch: weitere 35 % der Hedge-Gewinne realisieren und gestaffelt reinvestieren.',
-      triggeredRules, ruleVersion: RULE_VERSION
+      recommendation: 'NASDAQ im schweren Drawdown: weitere 35 % der Hedge-Gewinne realisieren und gestaffelt reinvestieren.',
+      triggeredRules, ruleVersion: config.version
     };
   }
-  if (drawdownPercent <= -30) {
-    triggeredRules.push('DRAWDOWN_30');
+  if (drawdownPercent <= config.drawdownRealizeFirstPercent) {
+    triggeredRules.push('DRAWDOWN_REALIZE_FIRST');
     return {
       action: 'REALIZE_25_PERCENT', severity: 'yellow',
-      recommendation: 'NASDAQ mindestens 30 % unter Referenzhoch: 25 % der Hedge-Gewinne realisieren und nach festgelegtem Plan reinvestieren.',
-      triggeredRules, ruleVersion: RULE_VERSION
+      recommendation: 'NASDAQ im deutlichen Drawdown: 25 % der Hedge-Gewinne realisieren und nach festgelegtem Plan reinvestieren.',
+      triggeredRules, ruleVersion: config.version
     };
   }
-  if (drawdownPercent <= -20) {
-    triggeredRules.push('DRAWDOWN_20');
-    if (vixPercentile > 80) triggeredRules.push('VIX_EXPENSIVE');
+  if (drawdownPercent <= config.drawdownHoldPercent) {
+    triggeredRules.push('DRAWDOWN_HOLD');
+    if (vixPercentile > config.expensiveVolatilityPercentile) triggeredRules.push('VIX_EXPENSIVE');
     return {
-      action: 'HOLD_HEDGE', severity: vixPercentile > 80 ? 'orange' : 'yellow',
-      recommendation: 'NASDAQ mindestens 20 % unter Referenzhoch: bestehenden Hedge halten; bei hohem VIX keine neue Absicherung zukaufen.',
-      triggeredRules, ruleVersion: RULE_VERSION
+      action: 'HOLD_HEDGE', severity: vixPercentile > config.expensiveVolatilityPercentile ? 'orange' : 'yellow',
+      recommendation: 'NASDAQ im Korrekturregime: bestehenden Hedge halten; bei hoher Volatilität keine neue Absicherung zukaufen.',
+      triggeredRules, ruleVersion: config.version
     };
   }
-  if (vixPercentile > 80) {
+  if (vixPercentile > config.expensiveVolatilityPercentile) {
     triggeredRules.push('VIX_EXPENSIVE');
     return {
       action: 'DO_NOT_BUY_NEW_PUTS', severity: 'orange',
       recommendation: 'Implizite Volatilität ist historisch hoch: keine neuen Puts kaufen; bestehende Positionen prüfen und Kostenrisiko vermeiden.',
-      triggeredRules, ruleVersion: RULE_VERSION
+      triggeredRules, ruleVersion: config.version
     };
   }
-  if (drawdownPercent > -10 && vixPercentile < 25 && (hedgeCoveragePercent == null || hedgeCoveragePercent < 100)) {
+  if (
+    drawdownPercent > config.nearHighPercent &&
+    vixPercentile < config.cheapVolatilityPercentile &&
+    (hedgeCoveragePercent == null || hedgeCoveragePercent < config.targetHedgeCoveragePercent)
+  ) {
     triggeredRules.push('NEAR_HIGH', 'VIX_CHEAP');
     if (hedgeCoveragePercent != null) triggeredRules.push('HEDGE_UNDER_TARGET');
     return {
       action: 'BUY_OR_ROLL_PUTS', severity: 'blue',
       recommendation: 'Markt nahe Referenzhoch und Volatilität günstig: Hedge-Lücke prüfen und Puts regelbasiert aufbauen oder rollen.',
-      triggeredRules, ruleVersion: RULE_VERSION
+      triggeredRules, ruleVersion: config.version
     };
   }
 
@@ -84,6 +94,6 @@ export function evaluateDecision(input: DecisionEngineInput): DecisionEngineResu
   return {
     action: 'HOLD', severity: 'green',
     recommendation: 'Keine Aktion. Bestehende Hedge-Struktur und Risikolimits beibehalten.',
-    triggeredRules, ruleVersion: RULE_VERSION
+    triggeredRules, ruleVersion: config.version
   };
 }
