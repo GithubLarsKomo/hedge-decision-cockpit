@@ -42,7 +42,7 @@ jobs:
       - name: Typecheck
         run: npm run typecheck >/dev/null
       - name: Lint
-        run: npm run lint >/dev/null
+        run: npm run lint
       - name: Test
         run: npm test >/dev/null
       - name: Build
