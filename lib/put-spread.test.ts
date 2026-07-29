@@ -69,3 +69,14 @@ test('rejects negative net debit spreads', () => {
     /No eligible short put candidate/
   );
 });
+
+test('rejects debit spreads that cost more than their maximum payoff', () => {
+  assert.throws(
+    () => constructPutSpread(
+      { strike: 100, premium: 15 },
+      [{ strike: 90, premium: 2 }],
+      { targetWidthPercent: 10, minimumWidthPercent: 5, maximumWidthPercent: 15 }
+    ),
+    /No eligible short put candidate/
+  );
+});
