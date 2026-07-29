@@ -60,7 +60,12 @@ export function constructPutSpread(
     const width = longPut.strike - candidate.strike;
     const widthPercent = width / longPut.strike * 100;
     const netDebitPerUnit = longPut.premium - candidate.premium;
-    if (netDebitPerUnit < 0 || widthPercent < config.minimumWidthPercent || widthPercent > config.maximumWidthPercent) {
+    if (
+      netDebitPerUnit < 0 ||
+      netDebitPerUnit > width ||
+      widthPercent < config.minimumWidthPercent ||
+      widthPercent > config.maximumWidthPercent
+    ) {
       return null;
     }
 
