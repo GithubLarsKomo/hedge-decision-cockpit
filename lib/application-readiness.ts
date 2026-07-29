@@ -14,36 +14,20 @@ export type ApplicationReadiness = {
 export function evaluateApplicationReadiness(input: {
   checkedAt: string;
   version: string;
-  databaseReachable: boolean;
-  ingestTokenConfigured: boolean;
-  dashboardAuthConfigured: boolean;
+  checks: ReadinessCheck[];
 }): ApplicationReadiness {
   const checkedAt = new Date(input.checkedAt);
   if (Number.isNaN(checkedAt.getTime())) throw new Error('checkedAt must be a valid ISO timestamp.');
   if (!input.version.trim()) throw new Error('version must not be empty.');
-
-  const checks: ReadinessCheck[] = [
-    {
-      name: 'database',
-      ok: input.databaseReachable,
-      detail: input.databaseReachable ? 'Database connection available.' : 'Database connection unavailable.'
-    },
-    {
-      name: 'ingest-token',
-      ok: input.ingestTokenConfigured,
-      detail: input.ingestTokenConfigured ? 'N8N ingest token configured.' : 'N8N ingest token missing.'
-    },
-    {
-      name: 'dashboard-auth',
-      ok: input.dashboardAuthConfigured,
-      detail: input.dashboardAuthConfigured ? 'Dashboard basic authentication configured.' : 'Dashboard basic authentication not configured.'
-    }
-  ];
+  if (input.checks.length === 0) throw new Error('checks must not be empty.');
+  if (input.checks.some(check => !check.name.trim() || !check.detail.trim())) {
+    throw new Error('check name and detail must not be empty.');
+  }
 
   return {
-    status: checks.every(check => check.ok) ? 'ready' : 'degraded',
+    status: input.checks.every(check => check.ok) ? 'ready' : 'degraded',
     checkedAt: checkedAt.toISOString(),
     version: input.version,
-    checks
+    checks: input.checks
   };
 }
