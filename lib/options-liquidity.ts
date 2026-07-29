@@ -35,7 +35,7 @@ export function assessLiquidity(quote: OptionLiquidityQuote): LiquidityAssessmen
 
   const midpoint = (quote.bid + quote.ask) / 2;
   const absoluteSpread = quote.ask - quote.bid;
-  const relativeSpreadPercent = midpoint === 0 ? (absoluteSpread === 0 ? 0 : Number.POSITIVE_INFINITY) : (absoluteSpread / midpoint) * 100;
+  const relativeSpreadPercent = midpoint === 0 ? Number.POSITIVE_INFINITY : (absoluteSpread / midpoint) * 100;
 
   return { ...quote, midpoint, absoluteSpread, relativeSpreadPercent };
 }
