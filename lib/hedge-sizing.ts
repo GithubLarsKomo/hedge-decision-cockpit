@@ -19,6 +19,7 @@ export type HedgeSizingResult = {
   achievedHedgeNotionalEur: number;
   achievedCoverageRatio: number;
   residualNotionalEur: number;
+  overhedgeNotionalEur: number;
   capped: boolean;
 };
 
@@ -51,8 +52,8 @@ export function recommendHedgeContracts(input: HedgeSizingInput): HedgeSizingRes
     throw new Error('targetCoverageRatio must be between 0 and 1.');
   }
   if (input.underlyingPrice <= 0) throw new Error('underlyingPrice must be positive.');
-  if (input.optionDelta === 0 || Math.abs(input.optionDelta) > 1) {
-    throw new Error('optionDelta must be non-zero and between -1 and 1.');
+  if (input.optionDelta >= 0 || input.optionDelta < -1) {
+    throw new Error('optionDelta must be between -1 and 0 for a protective put.');
   }
   if (multiplier <= 0) throw new Error('contractMultiplier must be positive.');
   if (eurPerQuoteCurrency <= 0) throw new Error('eurPerQuoteCurrency must be positive.');
@@ -64,7 +65,7 @@ export function recommendHedgeContracts(input: HedgeSizingInput): HedgeSizingRes
 
   const targetHedgeNotionalEur = input.portfolioValueEur * input.targetCoverageRatio;
   const hedgeNotionalPerContractEur =
-    input.underlyingPrice * multiplier * Math.abs(input.optionDelta) * eurPerQuoteCurrency;
+    input.underlyingPrice * multiplier * -input.optionDelta * eurPerQuoteCurrency;
   const rawContracts = targetHedgeNotionalEur / hedgeNotionalPerContractEur;
   const roundedContracts = roundContracts(rawContracts, rounding);
   const recommendedContracts = input.maxContracts == null
@@ -72,6 +73,7 @@ export function recommendHedgeContracts(input: HedgeSizingInput): HedgeSizingRes
     : Math.min(roundedContracts, input.maxContracts);
   const achievedHedgeNotionalEur = recommendedContracts * hedgeNotionalPerContractEur;
   const achievedCoverageRatio = achievedHedgeNotionalEur / input.portfolioValueEur;
+  const coverageDifferenceEur = targetHedgeNotionalEur - achievedHedgeNotionalEur;
 
   return {
     targetHedgeNotionalEur,
@@ -80,7 +82,8 @@ export function recommendHedgeContracts(input: HedgeSizingInput): HedgeSizingRes
     recommendedContracts,
     achievedHedgeNotionalEur,
     achievedCoverageRatio,
-    residualNotionalEur: targetHedgeNotionalEur - achievedHedgeNotionalEur,
+    residualNotionalEur: Math.max(0, coverageDifferenceEur),
+    overhedgeNotionalEur: Math.max(0, -coverageDifferenceEur),
     capped: input.maxContracts != null && roundedContracts > input.maxContracts
   };
 }
