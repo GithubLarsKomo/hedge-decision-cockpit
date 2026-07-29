@@ -30,9 +30,17 @@ test('sorts eligible quotes deterministically by spread then depth', () => {
   assert.deepEqual(result.map(item => item.symbol), ['TIGHT', 'A', 'B']);
 });
 
-test('handles a zero bid and ask without division errors', () => {
-  const result = assessLiquidity({ symbol: 'ZERO', bid: 0, ask: 0, volume: 0, openInterest: 0 });
-  assert.equal(result.relativeSpreadPercent, 0);
+test('marks a zero quote as non-executable and filters it out', () => {
+  const quote = { symbol: 'ZERO', bid: 0, ask: 0, volume: 100, openInterest: 100 };
+  const assessment = assessLiquidity(quote);
+  assert.equal(assessment.relativeSpreadPercent, Number.POSITIVE_INFINITY);
+
+  const result = filterLiquidOptions([quote], {
+    maximumRelativeSpreadPercent: 1_000,
+    minimumVolume: 0,
+    minimumOpenInterest: 0
+  });
+  assert.deepEqual(result, []);
 });
 
 test('rejects crossed markets and invalid thresholds', () => {
