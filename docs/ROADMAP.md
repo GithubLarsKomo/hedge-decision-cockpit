@@ -33,12 +33,25 @@
 - Contract multiplier and FX conversion into Euro position values
 - Put-call-parity and boundary tests
 
-## Next: historical data and strategy simulation
+## Completed in v1.5 option strategies
+
+- Reusable long put, put spread and collar valuation
+- Aggregated strategy market value and net Greeks
+- Validation for quantities, multipliers and strike ordering
+
+## Completed in v1.6 execution costs
+
+- Bid and ask aware trade execution
+- Configurable slippage in basis points
+- Per-contract commissions and FX conversion
+- Aggregated multi-leg strategy cash flow and execution costs
+
+## Next: historical data and dynamic strategy simulation
 
 1. Import historical NDX, VIX/VXN and option-chain data into immutable market snapshots.
 2. Cover 2000–2002, 2008–2009, 2020, 2022 and later stress periods.
-3. Add bid-ask spread, slippage, expiry selection and scheduled roll rules.
-4. Compare no hedge, long put, put spread, collar and staged realization strategies.
+3. Add expiry selection and scheduled or threshold-based roll rules.
+4. Compare no hedge, long put, put spread, collar and staged realization strategies over time.
 5. Add explicit target hedge coverage and recommended contract quantities.
 6. Record human approval, actual execution and deviation reasons.
 
