@@ -6,9 +6,13 @@ export type CsvImportOptions = {
 };
 
 const REQUIRED_COLUMNS = ['observedAt', 'ndxClose', 'ndxReferenceHigh'] as const;
-const OPTIONAL_COLUMNS = ['vixClose', 'vxnClose', 'riskFreeRate', 'dividendYield'] as const;
 
-type ColumnName = (typeof REQUIRED_COLUMNS)[number] | (typeof OPTIONAL_COLUMNS)[number];
+type ColumnName =
+  | (typeof REQUIRED_COLUMNS)[number]
+  | 'vixClose'
+  | 'vxnClose'
+  | 'riskFreeRate'
+  | 'dividendYield';
 
 function parseLine(line: string, delimiter: string): string[] {
   const values: string[] = [];
