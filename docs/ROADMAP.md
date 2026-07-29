@@ -46,9 +46,23 @@
 - Per-contract commissions and FX conversion
 - Aggregated multi-leg strategy cash flow and execution costs
 
-## Next: historical data and dynamic strategy simulation
+## Completed in v1.7 market snapshot import foundation
 
-1. Import historical NDX, VIX/VXN and option-chain data into immutable market snapshots.
+- Canonical normalization of historical market observations
+- Deterministic SHA-256 content fingerprints
+- Chronological batch ordering and duplicate detection
+- Validation of NDX, VIX/VXN, rates and source metadata
+
+## Completed in v1.8 immutable snapshot persistence
+
+- Prisma persistence model for historical market snapshots
+- Unique content hashes and source/timestamp constraints
+- Idempotent batch insertion with explicit inserted and skipped counts
+- Mapping and validation tests independent of the database adapter
+
+## Next: historical datasets and dynamic strategy simulation
+
+1. Add concrete CSV importers for NDX, VIX/VXN and option-chain observations.
 2. Cover 2000–2002, 2008–2009, 2020, 2022 and later stress periods.
 3. Add expiry selection and scheduled or threshold-based roll rules.
 4. Compare no hedge, long put, put spread, collar and staged realization strategies over time.

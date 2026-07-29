@@ -59,3 +59,22 @@ model HedgePositionSnapshot {
   unrealizedGainEur      Decimal? @db.Decimal(18, 2)
   decision               Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
 }
+
+model MarketSnapshot {
+  id                   Int      @id @default(autoincrement())
+  createdAt            DateTime @default(now())
+  observedAt           DateTime
+  source               String   @db.VarChar(120)
+  contentHash          String   @unique @db.VarChar(64)
+  ndxClose             Float
+  ndxReferenceHigh     Float
+  ndxDrawdownPercent   Float
+  vixClose             Float?
+  vxnClose             Float?
+  riskFreeRate         Float?
+  dividendYield        Float?
+
+  @@unique([source, observedAt])
+  @@index([observedAt])
+  @@index([source])
+}
