@@ -79,6 +79,10 @@ test('rejects invalid timestamps and thresholds', () => {
     /quotedAt must be a valid ISO timestamp/
   );
   assert.throws(
+    () => filterFreshQuotes('2026-07-29T20:00:00', [], { maximumAgeSeconds: 30 }),
+    /explicit timezone/
+  );
+  assert.throws(
     () => filterFreshQuotes('2026-07-29T20:00:00Z', [], { maximumAgeSeconds: -1 }),
     /maximumAgeSeconds must be a non-negative integer/
   );
