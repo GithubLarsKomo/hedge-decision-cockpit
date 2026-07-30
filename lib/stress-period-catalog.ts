@@ -80,9 +80,6 @@ export function assessStressPeriodCoverage(
     const endsOn = parseTimestamp(period.endsOn, `endsOn for ${period.id}`);
     if (endsOn < startsOn) throw new Error(`Stress period ${period.id} ends before it starts.`);
 
-    const missingBeforeDays = missingDays(startsOn - firstObservation);
-    const missingAfterDays = missingDays(lastObservation - endsOn);
-
     return {
       ...period,
       covered: firstObservation <= startsOn && lastObservation >= endsOn,
