@@ -86,13 +86,13 @@ jobs:
       - name: Container smoke test
         shell: bash
         run: |
-          docker run --rm --detach \
+          docker run --detach \
             --name hedge-decision-cockpit-ci \
             --network host \
             --env DATABASE_URL="$DATABASE_URL" \
             --env PORT=3100 \
             hedge-decision-cockpit:ci >container.id
-          trap 'docker logs hedge-decision-cockpit-ci >container.log 2>&1 || true; docker stop hedge-decision-cockpit-ci >/dev/null 2>&1 || true' EXIT
+          trap 'docker logs hedge-decision-cockpit-ci >container.log 2>&1 || true; docker rm --force hedge-decision-cockpit-ci >/dev/null 2>&1 || true' EXIT
           SMOKE_TEST_BASE_URL=http://127.0.0.1:3100 npm run test:runtime
       - name: Upload container log
         if: failure()
