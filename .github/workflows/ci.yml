@@ -92,7 +92,7 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
-      - name: Generate production SBOM
+      - name: Generate CycloneDX SBOM
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: hedge-decision-cockpit:ci
@@ -101,6 +101,15 @@ jobs:
           exit-code: '0'
       - name: Verify CycloneDX SBOM
         run: npm run verify:sbom
+      - name: Generate SPDX SBOM
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: hedge-decision-cockpit:ci
+          format: spdx-json
+          output: hedge-decision-cockpit.spdx.json
+          exit-code: '0'
+      - name: Verify SPDX SBOM
+        run: node scripts/verify-spdx-sbom.mjs
       - name: Generate provenance metadata
         run: node scripts/generate-container-provenance.mjs
       - name: Verify provenance policy
@@ -110,6 +119,7 @@ jobs:
         run: |
           sha256sum \
             hedge-decision-cockpit.cdx.json \
+            hedge-decision-cockpit.spdx.json \
             hedge-decision-cockpit.provenance.json \
             hedge-decision-cockpit.intoto.json \
             > hedge-decision-cockpit.sha256
@@ -120,6 +130,7 @@ jobs:
           name: production-container-supply-chain
           path: |
             hedge-decision-cockpit.cdx.json
+            hedge-decision-cockpit.spdx.json
             hedge-decision-cockpit.provenance.json
             hedge-decision-cockpit.intoto.json
             hedge-decision-cockpit.sha256
