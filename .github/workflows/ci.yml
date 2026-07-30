@@ -110,6 +110,8 @@ jobs:
           exit-code: '0'
       - name: Verify SPDX SBOM
         run: node scripts/verify-spdx-sbom.mjs
+      - name: Verify SBOM cross-format consistency
+        run: node scripts/verify-sbom-consistency.mjs
       - name: Generate provenance metadata
         run: node scripts/generate-container-provenance.mjs
       - name: Verify provenance policy
