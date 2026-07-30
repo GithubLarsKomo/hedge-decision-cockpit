@@ -99,11 +99,31 @@ jobs:
           format: cyclonedx
           output: hedge-decision-cockpit.cdx.json
           exit-code: '0'
-      - name: Upload production SBOM
+      - name: Generate provenance manifest
+        shell: bash
+        run: |
+          image_id="$(docker image inspect hedge-decision-cockpit:ci --format '{{.Id}}')"
+          sbom_sha256="$(sha256sum hedge-decision-cockpit.cdx.json | cut -d' ' -f1)"
+          jq -n \
+            --arg schema_version "1" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commit_sha "$GITHUB_SHA" \
+            --arg workflow_ref "$GITHUB_WORKFLOW_REF" \
+            --arg run_id "$GITHUB_RUN_ID" \
+            --arg image_id "$image_id" \
+            --arg sbom_sha256 "$sbom_sha256" \
+            '{schemaVersion: $schema_version, repository: $repository, commitSha: $commit_sha, workflowRef: $workflow_ref, runId: $run_id, imageId: $image_id, sbom: {path: "hedge-decision-cockpit.cdx.json", sha256: $sbom_sha256}}' \
+            > hedge-decision-cockpit.provenance.json
+          jq -e \
+            '.schemaVersion == "1" and (.commitSha | length == 40) and (.imageId | startswith("sha256:")) and (.sbom.sha256 | length == 64)' \
+            hedge-decision-cockpit.provenance.json >/dev/null
+      - name: Upload production supply-chain metadata
         uses: actions/upload-artifact@v4
         with:
-          name: production-container-sbom
-          path: hedge-decision-cockpit.cdx.json
+          name: production-container-supply-chain
+          path: |
+            hedge-decision-cockpit.cdx.json
+            hedge-decision-cockpit.provenance.json
           if-no-files-found: error
           retention-days: 30
       - name: Verify non-root container user
