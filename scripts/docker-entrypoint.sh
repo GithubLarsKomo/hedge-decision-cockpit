@@ -2,7 +2,7 @@
 set -eu
 
 echo "Applying Prisma schema..."
-npx prisma db push --skip-generate
+node node_modules/prisma/build/index.js db push --skip-generate
 
 echo "Starting Next.js..."
 exec node server.js
