@@ -44,9 +44,17 @@ const cycloneRoot = normalize(cyclonedx.metadata?.component?.name);
 if (cycloneRoot && !cycloneRoot.includes("hedge-decision-cockpit")) {
   throw new Error(`Unexpected CycloneDX root component: ${cycloneRoot}`);
 }
-if (!spdx.documentNamespace || !String(spdx.documentNamespace).startsWith("https://")) {
-  throw new Error("SPDX document namespace must be an HTTPS URI");
+
+let namespace;
+try {
+  namespace = new URL(String(spdx.documentNamespace));
+} catch {
+  throw new Error("SPDX document namespace must be an absolute URI");
 }
+if (!namespace.protocol || !namespace.pathname) {
+  throw new Error("SPDX document namespace must be an absolute URI");
+}
+
 if (![...spdxNames].some((name) => name.includes("hedge-decision-cockpit")) && cycloneRoot !== normalize(imageName)) {
   throw new Error("Neither SBOM identifies the production container root");
 }
