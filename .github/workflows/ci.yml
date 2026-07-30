@@ -134,6 +134,25 @@ jobs:
             hedge-decision-cockpit.supply-chain-index.json \
             > hedge-decision-cockpit.sha256
           sha256sum --check hedge-decision-cockpit.sha256
+      - name: Package and verify supply-chain evidence bundle
+        shell: bash
+        run: |
+          files=(
+            hedge-decision-cockpit.cdx.json
+            hedge-decision-cockpit.spdx.json
+            hedge-decision-cockpit.sbom-summary.json
+            hedge-decision-cockpit.provenance.json
+            hedge-decision-cockpit.intoto.json
+            hedge-decision-cockpit.supply-chain-index.json
+            hedge-decision-cockpit.sha256
+          )
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+            -czf hedge-decision-cockpit.supply-chain-evidence.tar.gz "${files[@]}"
+          test "$(tar -tzf hedge-decision-cockpit.supply-chain-evidence.tar.gz | wc -l)" -eq "${#files[@]}"
+          rm -rf .evidence-check
+          mkdir .evidence-check
+          tar -xzf hedge-decision-cockpit.supply-chain-evidence.tar.gz -C .evidence-check
+          (cd .evidence-check && sha256sum --check hedge-decision-cockpit.sha256)
       - name: Upload production supply-chain metadata
         uses: actions/upload-artifact@v4
         with:
@@ -146,6 +165,7 @@ jobs:
             hedge-decision-cockpit.intoto.json
             hedge-decision-cockpit.supply-chain-index.json
             hedge-decision-cockpit.sha256
+            hedge-decision-cockpit.supply-chain-evidence.tar.gz
           if-no-files-found: error
           retention-days: 30
       - name: Verify non-root container user
