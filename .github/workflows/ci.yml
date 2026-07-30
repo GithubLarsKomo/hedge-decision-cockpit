@@ -85,17 +85,24 @@ jobs:
         run: docker build --tag hedge-decision-cockpit:ci .
       - name: Verify non-root container user
         run: test "$(docker image inspect hedge-decision-cockpit:ci --format '{{.Config.User}}')" = "node"
-      - name: Container smoke test
+      - name: Hardened container smoke test
         shell: bash
         run: |
           docker run --detach \
             --name hedge-decision-cockpit-ci \
             --network host \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
             --env DATABASE_URL="$DATABASE_URL" \
             --env PORT=3100 \
             hedge-decision-cockpit:ci >container.id
           trap 'docker logs hedge-decision-cockpit-ci >container.log 2>&1 || true; docker rm --force hedge-decision-cockpit-ci >/dev/null 2>&1 || true' EXIT
           test "$(docker exec hedge-decision-cockpit-ci id -u)" -ne 0
+          test "$(docker inspect hedge-decision-cockpit-ci --format '{{.HostConfig.ReadonlyRootfs}}')" = "true"
+          test "$(docker inspect hedge-decision-cockpit-ci --format '{{.HostConfig.CapDrop}}')" = "[ALL]"
+          test "$(docker inspect hedge-decision-cockpit-ci --format '{{.HostConfig.SecurityOpt}}')" = "[no-new-privileges:true]"
           SMOKE_TEST_BASE_URL=http://127.0.0.1:3100 npm run test:runtime
       - name: Upload container log
         if: failure()
