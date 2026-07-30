@@ -83,6 +83,15 @@ jobs:
           if-no-files-found: ignore
       - name: Build production container
         run: docker build --tag hedge-decision-cockpit:ci .
+      - name: Scan production container
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: hedge-decision-cockpit:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
       - name: Verify non-root container user
         run: test "$(docker image inspect hedge-decision-cockpit:ci --format '{{.Config.User}}')" = "node"
       - name: Hardened container smoke test
