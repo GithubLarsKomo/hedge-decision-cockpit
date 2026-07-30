@@ -55,6 +55,25 @@ jobs:
             --arg verifiedAt "$verified_at" \
             '{schemaVersion: 1, repository: $repository, sourceWorkflowRunId: $sourceWorkflowRunId, sourceCommit: $sourceCommit, artifact: $artifact, artifactSha256: $artifactSha256, verifiedAt: $verifiedAt, result: "success"}' \
             > attestation-verification.json
+      - name: Validate verification evidence integrity
+        env:
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report=attestation-verification.json
+          test "$(jq -r '.schemaVersion' "$report")" = "1"
+          test "$(jq -r '.repository' "$report")" = "$GITHUB_REPOSITORY"
+          test "$(jq -r '.sourceWorkflowRunId' "$report")" = "$SOURCE_RUN_ID"
+          test "$(jq -r '.sourceCommit' "$report")" = "$SOURCE_HEAD_SHA"
+          test "$(jq -r '.artifact' "$report")" = "hedge-decision-cockpit.supply-chain-evidence.tar.gz"
+          test "$(jq -r '.result' "$report")" = "success"
+          jq -e '.artifactSha256 | test("^[0-9a-f]{64}$")' "$report" >/dev/null
+          jq -e '.verifiedAt | fromdateiso8601' "$report" >/dev/null
+          test -s attestation-verification.txt
+          sha256sum attestation-verification.json attestation-verification.txt > attestation-verification.sha256
+          sha256sum --check attestation-verification.sha256
       - name: Upload attestation verification evidence
         uses: actions/upload-artifact@v4
         with:
@@ -62,5 +81,6 @@ jobs:
           path: |
             attestation-verification.json
             attestation-verification.txt
+            attestation-verification.sha256
           if-no-files-found: error
           retention-days: 30
