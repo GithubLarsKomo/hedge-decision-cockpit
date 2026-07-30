@@ -83,6 +83,8 @@ jobs:
           if-no-files-found: ignore
       - name: Build production container
         run: docker build --tag hedge-decision-cockpit:ci .
+      - name: Verify non-root container user
+        run: test "$(docker image inspect hedge-decision-cockpit:ci --format '{{.Config.User}}')" = "node"
       - name: Container smoke test
         shell: bash
         run: |
@@ -93,6 +95,7 @@ jobs:
             --env PORT=3100 \
             hedge-decision-cockpit:ci >container.id
           trap 'docker logs hedge-decision-cockpit-ci >container.log 2>&1 || true; docker rm --force hedge-decision-cockpit-ci >/dev/null 2>&1 || true' EXIT
+          test "$(docker exec hedge-decision-cockpit-ci id -u)" -ne 0
           SMOKE_TEST_BASE_URL=http://127.0.0.1:3100 npm run test:runtime
       - name: Upload container log
         if: failure()
