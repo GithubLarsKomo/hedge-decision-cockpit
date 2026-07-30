@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.31.0",
+  "version": "1.32.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
     "test:runtime": "node scripts/runtime-smoke-test.mjs",
     "verify:provenance": "node scripts/verify-container-provenance.mjs",
     "verify:sbom": "node scripts/verify-cyclonedx-sbom.mjs",
+    "generate:sbom-summary": "node scripts/generate-sbom-summary.mjs",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",

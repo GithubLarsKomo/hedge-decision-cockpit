@@ -112,6 +112,8 @@ jobs:
         run: node scripts/verify-spdx-sbom.mjs
       - name: Verify SBOM cross-format consistency
         run: node scripts/verify-sbom-consistency.mjs
+      - name: Generate SBOM inventory summary
+        run: npm run generate:sbom-summary
       - name: Generate provenance metadata
         run: node scripts/generate-container-provenance.mjs
       - name: Verify provenance policy
@@ -122,6 +124,7 @@ jobs:
           sha256sum \
             hedge-decision-cockpit.cdx.json \
             hedge-decision-cockpit.spdx.json \
+            hedge-decision-cockpit.sbom-summary.json \
             hedge-decision-cockpit.provenance.json \
             hedge-decision-cockpit.intoto.json \
             > hedge-decision-cockpit.sha256
@@ -133,6 +136,7 @@ jobs:
           path: |
             hedge-decision-cockpit.cdx.json
             hedge-decision-cockpit.spdx.json
+            hedge-decision-cockpit.sbom-summary.json
             hedge-decision-cockpit.provenance.json
             hedge-decision-cockpit.intoto.json
             hedge-decision-cockpit.sha256
