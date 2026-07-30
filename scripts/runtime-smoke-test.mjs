@@ -6,6 +6,15 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function verifyLiveness() {
+  const response = await fetch(`${baseUrl}/api/live`, { cache: 'no-store' });
+  const body = await response.json();
+  assert(response.status === 200, `liveness returned HTTP ${response.status}`);
+  assert(body.status === 'alive', `liveness status was ${String(body.status)}`);
+  assert(typeof body.version === 'string' && body.version.length > 0, 'liveness version was missing');
+  assert(typeof body.timestamp === 'string' && !Number.isNaN(Date.parse(body.timestamp)), 'liveness timestamp was invalid');
+}
+
 async function waitForReady() {
   const deadline = Date.now() + timeoutMs;
   let lastError;
@@ -39,6 +48,7 @@ async function verifyTestPage() {
   assert(html.includes('BESTANDEN'), '/test did not contain the expected BESTANDEN marker');
 }
 
+await verifyLiveness();
 const health = await waitForReady();
 await verifyTestPage();
 console.log(`Runtime smoke test passed for version ${health.version ?? 'unknown'}.`);
