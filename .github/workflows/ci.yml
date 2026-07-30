@@ -92,6 +92,20 @@ jobs:
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
+      - name: Generate production SBOM
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: hedge-decision-cockpit:ci
+          format: cyclonedx
+          output: hedge-decision-cockpit.cdx.json
+          exit-code: '0'
+      - name: Upload production SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-container-sbom
+          path: hedge-decision-cockpit.cdx.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Verify non-root container user
         run: test "$(docker image inspect hedge-decision-cockpit:ci --format '{{.Config.User}}')" = "node"
       - name: Hardened container smoke test
