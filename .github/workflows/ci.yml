@@ -94,6 +94,7 @@ jobs:
             --read-only \
             --tmpfs /tmp:rw,noexec,nosuid,size=64m \
             --cap-drop ALL \
+            --pids-limit 256 \
             --security-opt no-new-privileges:true \
             --env DATABASE_URL="$DATABASE_URL" \
             --env PORT=3100 \
@@ -102,6 +103,7 @@ jobs:
           test "$(docker exec hedge-decision-cockpit-ci id -u)" -ne 0
           test "$(docker inspect hedge-decision-cockpit-ci --format '{{.HostConfig.ReadonlyRootfs}}')" = "true"
           test "$(docker inspect hedge-decision-cockpit-ci --format '{{.HostConfig.CapDrop}}')" = "[ALL]"
+          test "$(docker inspect hedge-decision-cockpit-ci --format '{{.HostConfig.PidsLimit}}')" = "256"
           test "$(docker inspect hedge-decision-cockpit-ci --format '{{.HostConfig.SecurityOpt}}')" = "[no-new-privileges:true]"
           SMOKE_TEST_BASE_URL=http://127.0.0.1:3100 npm run test:runtime
       - name: Upload container log
