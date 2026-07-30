@@ -103,6 +103,15 @@ jobs:
         run: node scripts/generate-container-provenance.mjs
       - name: Verify provenance policy
         run: npm run verify:provenance
+      - name: Generate and verify integrity manifest
+        shell: bash
+        run: |
+          sha256sum \
+            hedge-decision-cockpit.cdx.json \
+            hedge-decision-cockpit.provenance.json \
+            hedge-decision-cockpit.intoto.json \
+            > hedge-decision-cockpit.sha256
+          sha256sum --check hedge-decision-cockpit.sha256
       - name: Upload production supply-chain metadata
         uses: actions/upload-artifact@v4
         with:
@@ -111,6 +120,7 @@ jobs:
             hedge-decision-cockpit.cdx.json
             hedge-decision-cockpit.provenance.json
             hedge-decision-cockpit.intoto.json
+            hedge-decision-cockpit.sha256
           if-no-files-found: error
           retention-days: 30
       - name: Verify non-root container user
