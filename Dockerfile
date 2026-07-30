@@ -18,7 +18,9 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
-RUN apk add --no-cache curl openssl
+RUN apk add --no-cache curl openssl \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
 COPY --chown=node:node --from=builder /app/public ./public
 COPY --chown=node:node --from=builder /app/.next/standalone ./
 COPY --chown=node:node --from=builder /app/.next/static ./.next/static
