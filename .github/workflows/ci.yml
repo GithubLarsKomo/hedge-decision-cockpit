@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 jobs:
   validate:
@@ -176,6 +178,11 @@ jobs:
             hedge-decision-cockpit.supply-chain-evidence.tar.gz.sha256
           if-no-files-found: error
           retention-days: 30
+      - name: Attest supply-chain evidence bundle
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/attest@v4
+        with:
+          subject-path: hedge-decision-cockpit.supply-chain-evidence.tar.gz
       - name: Verify non-root container user
         run: test "$(docker image inspect hedge-decision-cockpit:ci --format '{{.Config.User}}')" = "node"
       - name: Hardened container smoke test
