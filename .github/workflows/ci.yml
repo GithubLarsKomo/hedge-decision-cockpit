@@ -146,12 +146,19 @@ jobs:
             hedge-decision-cockpit.supply-chain-index.json
             hedge-decision-cockpit.sha256
           )
-          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
-            -czf hedge-decision-cockpit.supply-chain-evidence.tar.gz "${files[@]}"
-          test "$(tar -tzf hedge-decision-cockpit.supply-chain-evidence.tar.gz | wc -l)" -eq "${#files[@]}"
+          archive=hedge-decision-cockpit.supply-chain-evidence.tar.gz
+          candidate="${archive}.candidate"
+          tar_args=(--sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner)
+          tar "${tar_args[@]}" -czf "$archive" "${files[@]}"
+          tar "${tar_args[@]}" -czf "$candidate" "${files[@]}"
+          cmp --silent "$archive" "$candidate"
+          rm "$candidate"
+          sha256sum "$archive" > "${archive}.sha256"
+          sha256sum --check "${archive}.sha256"
+          test "$(tar -tzf "$archive" | wc -l)" -eq "${#files[@]}"
           rm -rf .evidence-check
           mkdir .evidence-check
-          tar -xzf hedge-decision-cockpit.supply-chain-evidence.tar.gz -C .evidence-check
+          tar -xzf "$archive" -C .evidence-check
           (cd .evidence-check && sha256sum --check hedge-decision-cockpit.sha256)
       - name: Upload production supply-chain metadata
         uses: actions/upload-artifact@v4
@@ -166,6 +173,7 @@ jobs:
             hedge-decision-cockpit.supply-chain-index.json
             hedge-decision-cockpit.sha256
             hedge-decision-cockpit.supply-chain-evidence.tar.gz
+            hedge-decision-cockpit.supply-chain-evidence.tar.gz.sha256
           if-no-files-found: error
           retention-days: 30
       - name: Verify non-root container user
