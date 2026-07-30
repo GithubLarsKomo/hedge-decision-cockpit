@@ -118,6 +118,8 @@ jobs:
         run: node scripts/generate-container-provenance.mjs
       - name: Verify provenance policy
         run: npm run verify:provenance
+      - name: Generate supply-chain evidence index
+        run: npm run generate:supply-chain-index
       - name: Generate and verify integrity manifest
         shell: bash
         run: |
@@ -127,6 +129,7 @@ jobs:
             hedge-decision-cockpit.sbom-summary.json \
             hedge-decision-cockpit.provenance.json \
             hedge-decision-cockpit.intoto.json \
+            hedge-decision-cockpit.supply-chain-index.json \
             > hedge-decision-cockpit.sha256
           sha256sum --check hedge-decision-cockpit.sha256
       - name: Upload production supply-chain metadata
@@ -139,6 +142,7 @@ jobs:
             hedge-decision-cockpit.sbom-summary.json
             hedge-decision-cockpit.provenance.json
             hedge-decision-cockpit.intoto.json
+            hedge-decision-cockpit.supply-chain-index.json
             hedge-decision-cockpit.sha256
           if-no-files-found: error
           retention-days: 30
