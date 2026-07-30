@@ -61,10 +61,15 @@ jobs:
         run: |
           tail -n 40 build.log
           exit 1
+      - name: Prepare standalone runtime
+        run: |
+          mkdir -p .next/standalone/.next
+          cp -R .next/static .next/standalone/.next/static
+          if [ -d public ]; then cp -R public .next/standalone/public; fi
       - name: Runtime smoke test
         shell: bash
         run: |
-          npm start >runtime.log 2>&1 &
+          HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js >runtime.log 2>&1 &
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           npm run test:runtime
