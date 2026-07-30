@@ -66,6 +66,10 @@ jobs:
           mkdir -p .next/standalone/.next
           cp -R .next/static .next/standalone/.next/static
           if [ -d public ]; then cp -R public .next/standalone/public; fi
+          mkdir -p .next/standalone/node_modules
+          rm -rf .next/standalone/node_modules/.prisma .next/standalone/node_modules/@prisma
+          cp -R node_modules/.prisma .next/standalone/node_modules/.prisma
+          cp -R node_modules/@prisma .next/standalone/node_modules/@prisma
       - name: Runtime smoke test
         shell: bash
         run: |
