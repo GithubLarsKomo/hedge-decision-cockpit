@@ -14,14 +14,18 @@ async function waitForReady() {
     try {
       const response = await fetch(`${baseUrl}/api/health`, { cache: 'no-store' });
       const body = await response.json();
-      const databaseDetail = body.checks?.database?.detail ?? 'no database detail';
+      const databaseCheck = Array.isArray(body.checks)
+        ? body.checks.find((check) => check && check.name === 'database')
+        : undefined;
+      const databaseDetail = databaseCheck?.detail ?? 'no database detail';
+
       assert(response.status === 200, `health returned HTTP ${response.status}: ${databaseDetail}`);
       assert(body.status === 'ready', `health status was ${String(body.status)}: ${databaseDetail}`);
-      assert(body.checks?.database?.status === 'up', `database readiness check was not up: ${databaseDetail}`);
+      assert(databaseCheck?.ok === true, `database readiness check was not up: ${databaseDetail}`);
       return body;
     } catch (error) {
       lastError = error;
-      await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
     }
   }
 
