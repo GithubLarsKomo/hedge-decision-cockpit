@@ -7,7 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --pretty false 1>&2",
     "test": "tsx --test lib/*.test.ts",
     "test:runtime": "node scripts/runtime-smoke-test.mjs",
     "verify:provenance": "node scripts/verify-container-provenance.mjs",
