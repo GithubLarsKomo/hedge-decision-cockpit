@@ -27,13 +27,40 @@ jobs:
       - name: Verify GitHub artifact attestation
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         shell: bash
         run: |
+          set -euo pipefail
           artifact=hedge-decision-cockpit.supply-chain-evidence.tar.gz
+          log=attestation-verification.txt
+          verified=false
           for attempt in 1 2 3 4 5; do
-            if gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY"; then
-              exit 0
+            if gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY" >"$log" 2>&1; then
+              verified=true
+              break
             fi
             sleep 3
           done
-          exit 1
+          cat "$log"
+          test "$verified" = true
+          artifact_sha256=$(sha256sum "$artifact" | cut -d' ' -f1)
+          verified_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg sourceWorkflowRunId "$SOURCE_RUN_ID" \
+            --arg sourceCommit "$SOURCE_HEAD_SHA" \
+            --arg artifact "$artifact" \
+            --arg artifactSha256 "$artifact_sha256" \
+            --arg verifiedAt "$verified_at" \
+            '{schemaVersion: 1, repository: $repository, sourceWorkflowRunId: $sourceWorkflowRunId, sourceCommit: $sourceCommit, artifact: $artifact, artifactSha256: $artifactSha256, verifiedAt: $verifiedAt, result: "success"}' \
+            > attestation-verification.json
+      - name: Upload attestation verification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-attestation-verification
+          path: |
+            attestation-verification.json
+            attestation-verification.txt
+          if-no-files-found: error
+          retention-days: 30
