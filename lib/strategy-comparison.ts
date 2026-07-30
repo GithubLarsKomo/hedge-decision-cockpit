@@ -41,11 +41,17 @@ function assertScenario(scenario: StrategyScenario) {
   if (!Array.isArray(scenario.observations)) throw new Error(`Scenario ${scenario.id} observations must be an array.`);
 }
 
-function rankBy<T>(rows: T[], value: (row: T) => number, direction: 'asc' | 'desc') {
+function rankBy<T>(rows: T[], value: (row: T) => number, direction: 'asc' | 'desc'): T[] {
   return [...rows].sort((left, right) => {
     const difference = value(left) - value(right);
     return direction === 'asc' ? difference : -difference;
   });
+}
+
+function firstRankedId(rows: StrategyComparisonRow[], metric: (row: StrategyComparisonRow) => number): string {
+  const first = rankBy(rows, metric, 'desc').at(0);
+  if (!first) throw new Error('At least one strategy comparison row is required.');
+  return first.id;
 }
 
 export function compareStrategyScenarios(
@@ -86,8 +92,8 @@ export function compareStrategyScenarios(
 
   return {
     baselineId: baseline.id,
-    bestFinalValueId: rankBy(rows, row => row.finalPortfolioValueEur, 'desc')[0].id,
-    lowestDrawdownId: rankBy(rows, row => row.maximumDrawdownPercent, 'desc')[0].id,
+    bestFinalValueId: firstRankedId(rows, row => row.finalPortfolioValueEur),
+    lowestDrawdownId: firstRankedId(rows, row => row.maximumDrawdownPercent),
     rows,
     summaries
   };
