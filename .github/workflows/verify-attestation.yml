@@ -1,0 +1,39 @@
+name: Verify supply-chain attestation
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  actions: read
+  attestations: read
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download supply-chain evidence bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name production-container-supply-chain
+      - name: Verify GitHub artifact attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          artifact=hedge-decision-cockpit.supply-chain-evidence.tar.gz
+          for attempt in 1 2 3 4 5; do
+            if gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY"; then
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
