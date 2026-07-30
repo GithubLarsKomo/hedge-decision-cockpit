@@ -14,9 +14,10 @@ async function waitForReady() {
     try {
       const response = await fetch(`${baseUrl}/api/health`, { cache: 'no-store' });
       const body = await response.json();
-      assert(response.status === 200, `health returned HTTP ${response.status}`);
-      assert(body.status === 'ready', `health status was ${String(body.status)}`);
-      assert(body.checks?.database?.status === 'up', 'database readiness check was not up');
+      const databaseDetail = body.checks?.database?.detail ?? 'no database detail';
+      assert(response.status === 200, `health returned HTTP ${response.status}: ${databaseDetail}`);
+      assert(body.status === 'ready', `health status was ${String(body.status)}: ${databaseDetail}`);
+      assert(body.checks?.database?.status === 'up', `database readiness check was not up: ${databaseDetail}`);
       return body;
     } catch (error) {
       lastError = error;
