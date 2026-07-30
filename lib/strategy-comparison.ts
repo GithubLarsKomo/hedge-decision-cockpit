@@ -65,15 +65,15 @@ export function compareStrategyScenarios(
   const baseline = scenarios.find(scenario => scenario.kind === 'NO_HEDGE');
   if (!baseline) throw new Error('A NO_HEDGE baseline scenario is required.');
 
-  const summaries = Object.fromEntries(
-    scenarios.map(scenario => [
-      scenario.id,
-      runPortfolioBacktest(scenario.observations, portfolioConfig, strategyConfig)
-    ])
-  );
+  const summaries: Record<string, PortfolioBacktestSummary> = {};
+  for (const scenario of scenarios) {
+    summaries[scenario.id] = runPortfolioBacktest(scenario.observations, portfolioConfig, strategyConfig);
+  }
 
-  const rows = scenarios.map(scenario => {
+  const rows: StrategyComparisonRow[] = scenarios.map(scenario => {
     const summary = summaries[scenario.id];
+    if (!summary) throw new Error(`Missing backtest summary for scenario ${scenario.id}.`);
+
     return {
       id: scenario.id,
       kind: scenario.kind,
