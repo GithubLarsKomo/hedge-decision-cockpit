@@ -120,6 +120,8 @@ jobs:
         run: npm run verify:provenance
       - name: Generate supply-chain evidence index
         run: npm run generate:supply-chain-index
+      - name: Verify supply-chain evidence index
+        run: npm run verify:supply-chain-index
       - name: Generate and verify integrity manifest
         shell: bash
         run: |
