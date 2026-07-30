@@ -33,8 +33,8 @@ const REQUIRED_COLUMNS = [
   'strike'
 ] as const;
 
-const OPTIONAL_COLUMNS = ['bid', 'ask', 'last', 'impliedVolatility', 'openInterest', 'volume'] as const;
-type ColumnName = (typeof REQUIRED_COLUMNS)[number] | (typeof OPTIONAL_COLUMNS)[number];
+type OptionalColumnName = 'bid' | 'ask' | 'last' | 'impliedVolatility' | 'openInterest' | 'volume';
+type ColumnName = (typeof REQUIRED_COLUMNS)[number] | OptionalColumnName;
 
 function parseLine(line: string, delimiter: string): string[] {
   const values: string[] = [];
