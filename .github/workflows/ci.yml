@@ -64,7 +64,13 @@ jobs:
       - name: Runtime smoke test
         shell: bash
         run: |
-          HOSTNAME=127.0.0.1 PORT=3000 npm start >runtime.log 2>&1 &
+          mkdir -p .next/standalone/.next
+          cp -a .next/static .next/standalone/.next/static
+          if [ -d public ]; then cp -a public .next/standalone/public; fi
+          (
+            cd .next/standalone
+            HOSTNAME=127.0.0.1 PORT=3000 DATABASE_URL="$DATABASE_URL" node server.js
+          ) >runtime.log 2>&1 &
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           npm run test:runtime
