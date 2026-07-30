@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.40.0",
+  "version": "1.41.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
     "test:runtime": "node scripts/runtime-smoke-test.mjs",
     "verify:provenance": "node scripts/verify-container-provenance.mjs",
     "verify:sbom": "node scripts/verify-cyclonedx-sbom.mjs",
+    "verify:evidence-bundle": "bash scripts/verify-supply-chain-bundle.sh",
     "generate:sbom-summary": "node scripts/generate-sbom-summary.mjs",
     "generate:supply-chain-index": "node scripts/generate-supply-chain-evidence-index.mjs",
     "verify:supply-chain-index": "node scripts/verify-supply-chain-evidence-index.mjs",
