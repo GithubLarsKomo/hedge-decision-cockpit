@@ -99,6 +99,8 @@ jobs:
           format: cyclonedx
           output: hedge-decision-cockpit.cdx.json
           exit-code: '0'
+      - name: Verify CycloneDX SBOM
+        run: npm run verify:sbom
       - name: Generate provenance metadata
         run: node scripts/generate-container-provenance.mjs
       - name: Verify provenance policy
