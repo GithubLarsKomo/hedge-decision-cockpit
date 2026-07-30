@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,6 +9,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test lib/*.test.ts",
+    "test:runtime": "node scripts/runtime-smoke-test.mjs",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
