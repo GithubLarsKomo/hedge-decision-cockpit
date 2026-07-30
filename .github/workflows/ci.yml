@@ -101,6 +101,8 @@ jobs:
           exit-code: '0'
       - name: Generate provenance metadata
         run: node scripts/generate-container-provenance.mjs
+      - name: Verify provenance policy
+        run: npm run verify:provenance
       - name: Upload production supply-chain metadata
         uses: actions/upload-artifact@v4
         with:
