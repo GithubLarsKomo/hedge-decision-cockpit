@@ -73,7 +73,10 @@ jobs:
       - name: Runtime smoke test
         shell: bash
         run: |
-          HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js >runtime.log 2>&1 &
+          (
+            cd .next/standalone
+            HOSTNAME=127.0.0.1 PORT=3000 node server.js >../../runtime.log 2>&1
+          ) &
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           npm run test:runtime
