@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.42.0",
+  "version": "1.43.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -33,7 +33,7 @@
   "devDependencies": {
     "@types/node": "^20.17.6",
     "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react-dom": "^18.3.12",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.21",
