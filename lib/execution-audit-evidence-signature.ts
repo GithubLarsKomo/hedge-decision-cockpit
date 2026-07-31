@@ -18,6 +18,21 @@ function assertSignature(signature: ExecutionAuditEvidenceSignature) {
   }
 }
 
+export function parseExecutionAuditEvidenceSignature(content: string): ExecutionAuditEvidenceSignature {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error('Execution audit evidence signature must contain valid JSON.');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Execution audit evidence signature must be a JSON object.');
+  }
+  const signature = parsed as ExecutionAuditEvidenceSignature;
+  assertSignature(signature);
+  return signature;
+}
+
 export function signExecutionAuditEvidenceManifest(
   manifestContent: string,
   privateKeyPem: string,
