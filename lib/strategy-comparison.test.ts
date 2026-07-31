@@ -4,9 +4,9 @@ import { PortfolioObservation } from './portfolio-backtest';
 import { compareStrategyScenarios, HedgeStrategyKind } from './strategy-comparison';
 
 const market: PortfolioObservation[] = [
-  { observedAt: '2020-01-02T00:00:00.000Z', ndxClose: 100, vixClose: 15 },
-  { observedAt: '2020-03-20T00:00:00.000Z', ndxClose: 70, vixClose: 65 },
-  { observedAt: '2020-06-01T00:00:00.000Z', ndxClose: 90, vixClose: 28 }
+  { observedAt: '2020-01-02T00:00:00.000Z', ndxClose: 100 },
+  { observedAt: '2020-03-20T00:00:00.000Z', ndxClose: 70 },
+  { observedAt: '2020-06-01T00:00:00.000Z', ndxClose: 90 }
 ];
 
 function scenario(id: string, kind: HedgeStrategyKind, hedgeValues: number[], costs: number[] = [0, 0, 0]) {
