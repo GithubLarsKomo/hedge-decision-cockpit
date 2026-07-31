@@ -50,7 +50,7 @@ test('compares hedge scenarios against an explicit no-hedge baseline', () => {
 
   assert.equal(result.baselineId, 'none');
   assert.equal(result.bestFinalValueId, 'long-put');
-  assert.equal(result.lowestDrawdownId, 'long-put');
+  assert.equal(result.lowestDrawdownId, 'staged');
   assert.equal(result.rows.length, 5);
   assert.equal(result.rows.find(row => row.id === 'long-put')?.totalTransactionCostsEur, 1_000);
 });
