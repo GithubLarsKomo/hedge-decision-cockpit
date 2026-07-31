@@ -2,8 +2,24 @@
 
 import DecisionCard from './DecisionCard';
 import ExecutionAuditForm from './ExecutionAuditForm';
+import ExecutionAuditHistory from './ExecutionAuditHistory';
 import HistoryChart from './HistoryChart';
 import HistoryTable from './HistoryTable';
+
+export type ExecutionAuditRow = {
+  approvalDecision: string;
+  approvalRecordedAt: string;
+  executionStatus: string;
+  executionRecordedAt: string | null;
+  recommendedStrategy: string;
+  recommendedContracts: number;
+  executedStrategy: string | null;
+  executedContracts: number | null;
+  strategyChanged: boolean;
+  contractQuantityChanged: boolean;
+  notFullyExecuted: boolean;
+  deviationReason: string | null;
+};
 
 export type DecisionRow = {
   id: number;
@@ -19,6 +35,7 @@ export type DecisionRow = {
   hedgeMarketValueEur: number | null;
   hedgeUnrealizedGainEur: number | null;
   notes: string | null;
+  executionAudit: ExecutionAuditRow | null;
 };
 
 export default function Dashboard({ decisions }: { decisions: DecisionRow[] }) {
@@ -42,6 +59,7 @@ export default function Dashboard({ decisions }: { decisions: DecisionRow[] }) {
       )}
 
       <ExecutionAuditForm defaultDecisionId={latest?.id} />
+      <ExecutionAuditHistory decisions={decisions} />
 
       {decisions.length > 0 && (
         <section className="mt-8 grid gap-6">
