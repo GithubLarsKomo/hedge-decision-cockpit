@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildExecutionAuditEvidenceManifest,
+  parseExecutionAuditEvidenceManifest,
   serializeExecutionAuditEvidenceManifest,
   sha256Hex,
   verifyExecutionAuditEvidence
@@ -26,6 +27,18 @@ test('builds a normalized evidence manifest', async () => {
   assert.equal(manifest.recordCount, 1);
   assert.equal(manifest.csvByteLength, 15);
   assert.match(manifest.csvSha256, /^[a-f0-9]{64}$/);
+});
+
+test('parses and validates an uploaded evidence manifest', async () => {
+  const manifest = await buildExecutionAuditEvidenceManifest('decisionId\n42', 1, '2026-07-31T08:00:00.000Z');
+
+  assert.deepEqual(parseExecutionAuditEvidenceManifest(JSON.stringify(manifest)), manifest);
+  assert.throws(() => parseExecutionAuditEvidenceManifest('{'), /valid JSON/);
+  assert.throws(() => parseExecutionAuditEvidenceManifest('[]'), /JSON object/);
+  assert.throws(
+    () => parseExecutionAuditEvidenceManifest(JSON.stringify({ ...manifest, schemaVersion: '2.0' })),
+    /schemaVersion/
+  );
 });
 
 test('verifies an unchanged CSV against its manifest', async () => {

@@ -38,6 +38,24 @@ function assertEvidenceManifest(manifest: ExecutionAuditEvidenceManifest) {
   }
 }
 
+export function parseExecutionAuditEvidenceManifest(content: string): ExecutionAuditEvidenceManifest {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error('Execution audit evidence manifest must contain valid JSON.');
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Execution audit evidence manifest must be a JSON object.');
+  }
+
+  const manifest = parsed as ExecutionAuditEvidenceManifest;
+  assertEvidenceManifest(manifest);
+  return manifest;
+}
+
 export async function sha256Hex(content: string) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content));
   return bytesToHex(new Uint8Array(digest));
