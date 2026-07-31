@@ -1,6 +1,7 @@
 'use client';
 
 import DecisionCard from './DecisionCard';
+import ExecutionAuditForm from './ExecutionAuditForm';
 import HistoryChart from './HistoryChart';
 import HistoryTable from './HistoryTable';
 
@@ -39,6 +40,8 @@ export default function Dashboard({ decisions }: { decisions: DecisionRow[] }) {
           Noch keine Daten. Sende den ersten POST aus n8n an <code>/api/decision</code>.
         </div>
       )}
+
+      <ExecutionAuditForm defaultDecisionId={latest?.id} />
 
       {decisions.length > 0 && (
         <section className="mt-8 grid gap-6">
