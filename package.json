@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.57.0",
+  "version": "1.58.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit --pretty false 1>&2",
     "test": "tsx --test lib/*.test.ts",
     "test:runtime": "node scripts/runtime-smoke-test.mjs",
+    "verify:audit-evidence": "tsx scripts/verify-execution-audit-evidence.ts",
     "verify:provenance": "node scripts/verify-container-provenance.mjs",
     "verify:sbom": "node scripts/verify-cyclonedx-sbom.mjs",
     "verify:evidence-bundle": "bash scripts/verify-supply-chain-bundle.sh",
