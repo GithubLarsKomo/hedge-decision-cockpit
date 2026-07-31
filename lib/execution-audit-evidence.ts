@@ -10,10 +10,13 @@ export type ExecutionAuditEvidenceVerification = {
   valid: boolean;
   hashMatches: boolean;
   byteLengthMatches: boolean;
+  recordCountMatches: boolean;
   expectedSha256: string;
   actualSha256: string;
   expectedByteLength: number;
   actualByteLength: number;
+  expectedRecordCount: number;
+  actualRecordCount: number;
 };
 
 function bytesToHex(bytes: Uint8Array) {
@@ -56,6 +59,43 @@ export function parseExecutionAuditEvidenceManifest(content: string): ExecutionA
   return manifest;
 }
 
+export function countExecutionAuditCsvRecords(csv: string) {
+  const content = csv.startsWith('\ufeff') ? csv.slice(1) : csv;
+  if (content.length === 0) {
+    return 0;
+  }
+
+  let inQuotes = false;
+  let rowCount = 1;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+
+    if (character === '"') {
+      if (inQuotes && content[index + 1] === '"') {
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (!inQuotes && character === '\n') {
+      rowCount += 1;
+    }
+  }
+
+  if (inQuotes) {
+    throw new Error('Execution audit CSV contains an unterminated quoted field.');
+  }
+
+  if (content.endsWith('\n')) {
+    rowCount -= 1;
+  }
+
+  return Math.max(0, rowCount - 1);
+}
+
 export async function sha256Hex(content: string) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content));
   return bytesToHex(new Uint8Array(digest));
@@ -92,17 +132,22 @@ export async function verifyExecutionAuditEvidence(
 
   const actualSha256 = await sha256Hex(csv);
   const actualByteLength = new TextEncoder().encode(csv).byteLength;
+  const actualRecordCount = countExecutionAuditCsvRecords(csv);
   const hashMatches = actualSha256 === manifest.csvSha256;
   const byteLengthMatches = actualByteLength === manifest.csvByteLength;
+  const recordCountMatches = actualRecordCount === manifest.recordCount;
 
   return {
-    valid: hashMatches && byteLengthMatches,
+    valid: hashMatches && byteLengthMatches && recordCountMatches,
     hashMatches,
     byteLengthMatches,
+    recordCountMatches,
     expectedSha256: manifest.csvSha256,
     actualSha256,
     expectedByteLength: manifest.csvByteLength,
-    actualByteLength
+    actualByteLength,
+    expectedRecordCount: manifest.recordCount,
+    actualRecordCount
   };
 }
 
