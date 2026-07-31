@@ -42,11 +42,11 @@ jobs:
       - name: Apply Prisma schema
         run: npx prisma db push --skip-generate >/dev/null
       - name: Typecheck
-        run: npm run typecheck >/dev/null
+        run: npm run typecheck
       - name: Lint
         run: npm run lint
       - name: Test
-        run: npm test >/dev/null
+        run: npm test
       - name: Build
         id: build
         continue-on-error: true
