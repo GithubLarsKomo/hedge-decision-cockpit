@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { DecisionRow } from './Dashboard';
+import { buildExecutionAuditCsv } from '@/lib/execution-audit-csv';
 import {
   filterExecutionAuditHistory,
   hasExecutionDeviation,
@@ -22,6 +23,16 @@ const initialFilter: AuditHistoryFilter = {
   deviation: 'ALL'
 };
 
+function downloadCsv(decisions: DecisionRow[]) {
+  const blob = new Blob([buildExecutionAuditCsv(decisions)], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `execution-audit-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ExecutionAuditHistory({ decisions }: { decisions: DecisionRow[] }) {
   const [filter, setFilter] = useState<AuditHistoryFilter>(initialFilter);
   const auditedCount = decisions.filter(decision => decision.executionAudit !== null).length;
@@ -34,7 +45,12 @@ export default function ExecutionAuditHistory({ decisions }: { decisions: Decisi
           <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Governance</p>
           <h2 className="mt-1 text-xl font-semibold text-slate-950">Freigabe- und Ausführungshistorie</h2>
         </div>
-        <p className="text-sm text-slate-500">{auditedCount} von {decisions.length} Entscheidungen dokumentiert</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-slate-500">{auditedCount} von {decisions.length} Entscheidungen dokumentiert</p>
+          <button type="button" disabled={visible.length === 0} onClick={() => downloadCsv(visible)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+            Gefilterte CSV exportieren
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
