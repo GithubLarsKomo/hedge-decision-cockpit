@@ -1,6 +1,7 @@
 'use client';
 
 import DecisionCard from './DecisionCard';
+import ExecutionAuditEvidenceVerifier from './ExecutionAuditEvidenceVerifier';
 import ExecutionAuditForm from './ExecutionAuditForm';
 import ExecutionAuditHistory from './ExecutionAuditHistory';
 import HistoryChart from './HistoryChart';
@@ -60,6 +61,7 @@ export default function Dashboard({ decisions }: { decisions: DecisionRow[] }) {
 
       <ExecutionAuditForm defaultDecisionId={latest?.id} />
       <ExecutionAuditHistory decisions={decisions} />
+      <ExecutionAuditEvidenceVerifier />
 
       {decisions.length > 0 && (
         <section className="mt-8 grid gap-6">
