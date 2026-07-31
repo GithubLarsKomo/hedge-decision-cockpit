@@ -3,7 +3,8 @@ import test from 'node:test';
 import {
   buildExecutionAuditEvidenceManifest,
   serializeExecutionAuditEvidenceManifest,
-  sha256Hex
+  sha256Hex,
+  verifyExecutionAuditEvidence
 } from './execution-audit-evidence';
 
 test('creates deterministic SHA-256 hashes', async () => {
@@ -25,6 +26,44 @@ test('builds a normalized evidence manifest', async () => {
   assert.equal(manifest.recordCount, 1);
   assert.equal(manifest.csvByteLength, 15);
   assert.match(manifest.csvSha256, /^[a-f0-9]{64}$/);
+});
+
+test('verifies an unchanged CSV against its manifest', async () => {
+  const csv = '\ufeffdecisionId,status\r\n42,EXECUTED\r\n';
+  const manifest = await buildExecutionAuditEvidenceManifest(csv, 1, '2026-07-31T08:00:00.000Z');
+  const result = await verifyExecutionAuditEvidence(csv, manifest);
+
+  assert.equal(result.valid, true);
+  assert.equal(result.hashMatches, true);
+  assert.equal(result.byteLengthMatches, true);
+  assert.equal(result.expectedSha256, result.actualSha256);
+  assert.equal(result.expectedByteLength, result.actualByteLength);
+});
+
+test('reports hash and byte-length mismatches for changed CSV content', async () => {
+  const manifest = await buildExecutionAuditEvidenceManifest('decisionId\n42', 1);
+  const result = await verifyExecutionAuditEvidence('decisionId\n43', manifest);
+
+  assert.equal(result.valid, false);
+  assert.equal(result.hashMatches, false);
+  assert.equal(result.byteLengthMatches, true);
+});
+
+test('rejects malformed or unsupported manifests before verification', async () => {
+  const valid = await buildExecutionAuditEvidenceManifest('', 0);
+
+  await assert.rejects(
+    () => verifyExecutionAuditEvidence('', { ...valid, schemaVersion: '2.0' as '1.0' }),
+    /schemaVersion/
+  );
+  await assert.rejects(
+    () => verifyExecutionAuditEvidence('', { ...valid, csvSha256: 'ABC' }),
+    /csvSha256/
+  );
+  await assert.rejects(
+    () => verifyExecutionAuditEvidence('', { ...valid, csvByteLength: -1 }),
+    /csvByteLength/
+  );
 });
 
 test('serializes with stable formatting and trailing newline', async () => {
