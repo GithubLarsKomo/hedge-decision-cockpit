@@ -4,6 +4,10 @@ import { useMemo, useState } from 'react';
 import type { DecisionRow } from './Dashboard';
 import { buildExecutionAuditCsv } from '@/lib/execution-audit-csv';
 import {
+  buildExecutionAuditEvidenceManifest,
+  serializeExecutionAuditEvidenceManifest
+} from '@/lib/execution-audit-evidence';
+import {
   filterExecutionAuditHistory,
   hasExecutionDeviation,
   type AuditHistoryFilter
@@ -23,14 +27,32 @@ const initialFilter: AuditHistoryFilter = {
   deviation: 'ALL'
 };
 
-function downloadCsv(decisions: DecisionRow[]) {
-  const blob = new Blob([buildExecutionAuditCsv(decisions)], { type: 'text/csv;charset=utf-8' });
+function downloadBlob(content: BlobPart, type: string, filename: string) {
+  const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `execution-audit-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadCsv(decisions: DecisionRow[]) {
+  downloadBlob(
+    buildExecutionAuditCsv(decisions),
+    'text/csv;charset=utf-8',
+    `execution-audit-${new Date().toISOString().slice(0, 10)}.csv`
+  );
+}
+
+async function downloadEvidenceManifest(decisions: DecisionRow[]) {
+  const csv = buildExecutionAuditCsv(decisions);
+  const manifest = await buildExecutionAuditEvidenceManifest(csv, decisions.length);
+  downloadBlob(
+    serializeExecutionAuditEvidenceManifest(manifest),
+    'application/json;charset=utf-8',
+    `execution-audit-${new Date().toISOString().slice(0, 10)}.manifest.json`
+  );
 }
 
 export default function ExecutionAuditHistory({ decisions }: { decisions: DecisionRow[] }) {
@@ -49,6 +71,9 @@ export default function ExecutionAuditHistory({ decisions }: { decisions: Decisi
           <p className="text-sm text-slate-500">{auditedCount} von {decisions.length} Entscheidungen dokumentiert</p>
           <button type="button" disabled={visible.length === 0} onClick={() => downloadCsv(visible)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
             Gefilterte CSV exportieren
+          </button>
+          <button type="button" disabled={visible.length === 0} onClick={() => void downloadEvidenceManifest(visible)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+            Prüfnachweis exportieren
           </button>
         </div>
       </div>
