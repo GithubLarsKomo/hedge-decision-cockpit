@@ -30,6 +30,7 @@ model Decision {
   notes                   String?  @db.Text
   portfolioSnapshot       PortfolioSnapshot?
   hedgePositionSnapshot   HedgePositionSnapshot?
+  executionAuditRecord    ExecutionAuditRecord?
 
   @@index([createdAt])
   @@index([observedAt])
@@ -58,6 +59,35 @@ model HedgePositionSnapshot {
   marketValueEur         Decimal? @db.Decimal(18, 2)
   unrealizedGainEur      Decimal? @db.Decimal(18, 2)
   decision               Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+}
+
+model ExecutionAuditRecord {
+  id                       Int      @id @default(autoincrement())
+  decisionId               Int      @unique
+  recommendationId         String   @unique @db.VarChar(120)
+  recommendedStrategy      String   @db.VarChar(80)
+  recommendedContracts     Int
+  decidedAt                DateTime
+  approvalDecision         String   @db.VarChar(20)
+  approvalActorId          String   @db.VarChar(120)
+  approvalRecordedAt       DateTime
+  approvalReason           String?  @db.Text
+  executionStatus          String   @db.VarChar(30)
+  executionActorId         String?  @db.VarChar(120)
+  executionRecordedAt      DateTime?
+  executedStrategy         String?  @db.VarChar(80)
+  executedContracts        Int?
+  averagePrice             Decimal? @db.Decimal(18, 4)
+  strategyChanged          Boolean
+  contractQuantityChanged  Boolean
+  notFullyExecuted         Boolean
+  deviationReason          String?  @db.Text
+  createdAt                DateTime @default(now())
+  decision                 Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  @@index([decidedAt])
+  @@index([approvalDecision])
+  @@index([executionStatus])
 }
 
 model MarketSnapshot {
