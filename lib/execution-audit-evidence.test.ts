@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildExecutionAuditEvidenceManifest,
+  countExecutionAuditCsvRecords,
   parseExecutionAuditEvidenceManifest,
   serializeExecutionAuditEvidenceManifest,
   sha256Hex,
@@ -41,6 +42,16 @@ test('parses and validates an uploaded evidence manifest', async () => {
   );
 });
 
+test('counts CSV data records while ignoring quoted line breaks', () => {
+  assert.equal(countExecutionAuditCsvRecords('\ufeffdecisionId,status\r\n42,EXECUTED\r\n'), 1);
+  assert.equal(countExecutionAuditCsvRecords('decisionId,reason\n42,"line one\nline two"\n43,"ok"'), 2);
+  assert.equal(countExecutionAuditCsvRecords('decisionId,status\n'), 0);
+  assert.throws(
+    () => countExecutionAuditCsvRecords('decisionId,reason\n42,"unterminated'),
+    /unterminated quoted field/
+  );
+});
+
 test('verifies an unchanged CSV against its manifest', async () => {
   const csv = '\ufeffdecisionId,status\r\n42,EXECUTED\r\n';
   const manifest = await buildExecutionAuditEvidenceManifest(csv, 1, '2026-07-31T08:00:00.000Z');
@@ -49,8 +60,10 @@ test('verifies an unchanged CSV against its manifest', async () => {
   assert.equal(result.valid, true);
   assert.equal(result.hashMatches, true);
   assert.equal(result.byteLengthMatches, true);
+  assert.equal(result.recordCountMatches, true);
   assert.equal(result.expectedSha256, result.actualSha256);
   assert.equal(result.expectedByteLength, result.actualByteLength);
+  assert.equal(result.expectedRecordCount, result.actualRecordCount);
 });
 
 test('reports hash and byte-length mismatches for changed CSV content', async () => {
@@ -60,6 +73,20 @@ test('reports hash and byte-length mismatches for changed CSV content', async ()
   assert.equal(result.valid, false);
   assert.equal(result.hashMatches, false);
   assert.equal(result.byteLengthMatches, true);
+  assert.equal(result.recordCountMatches, true);
+});
+
+test('reports a record-count mismatch independently from content integrity', async () => {
+  const csv = 'decisionId\n42\n43\n';
+  const manifest = await buildExecutionAuditEvidenceManifest(csv, 1);
+  const result = await verifyExecutionAuditEvidence(csv, manifest);
+
+  assert.equal(result.valid, false);
+  assert.equal(result.hashMatches, true);
+  assert.equal(result.byteLengthMatches, true);
+  assert.equal(result.recordCountMatches, false);
+  assert.equal(result.expectedRecordCount, 1);
+  assert.equal(result.actualRecordCount, 2);
 });
 
 test('rejects malformed or unsupported manifests before verification', async () => {
