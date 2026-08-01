@@ -14,9 +14,9 @@ const policy: NearestNeighbourScoringPolicy = {
   fundSizeReference: 1_000_000_000,
   switchMargin: 0.02,
   weights: {
-    exposure: 0.55,
-    tracking: 0.25,
-    fundSize: 0.15,
+    exposure: 0.65,
+    tracking: 0.2,
+    fundSize: 0.1,
     ter: 0.05
   }
 };
