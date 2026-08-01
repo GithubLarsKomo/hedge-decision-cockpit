@@ -32,7 +32,11 @@ function fixture() {
       activeFrom: '2026-01-01T00:00:00.000Z'
     }]
   });
-  return { receiptContent, signatureContent: serializeExecutionAuditSigningRegistryReleaseBundleVerificationReceiptSignature(signature), trustedKeysContent };
+  return {
+    receiptContent,
+    receiptSignatureContent: serializeExecutionAuditSigningRegistryReleaseBundleVerificationReceiptSignature(signature),
+    trustedKeysContent
+  };
 }
 
 test('verifies a structurally valid archived approval pair', () => {
