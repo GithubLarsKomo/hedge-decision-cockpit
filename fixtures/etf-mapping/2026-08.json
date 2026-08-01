@@ -1,0 +1,34 @@
+{
+  "schema_version": "etf-nearest-neighbour-mapping/1.0",
+  "mapping_version": "2026-08",
+  "effective_date": "2026-08-31",
+  "exposures": [
+    {
+      "exposure_id": "emerging-markets",
+      "desired_reference": "MSCI Emerging Markets IMI",
+      "selected_instrument_id": "IE00BETTERFIT1",
+      "candidates": [
+        {
+          "instrument_id": "IE00CHEAPER001",
+          "exposure_fidelity": 0.88,
+          "ter": 0.0012,
+          "tracking_difference": 0.001,
+          "fund_size": 3000000000,
+          "savings_plan_eligible": true,
+          "tradable": true,
+          "active_for_new_purchases": true
+        },
+        {
+          "instrument_id": "IE00BETTERFIT1",
+          "exposure_fidelity": 0.98,
+          "ter": 0.0022,
+          "tracking_difference": 0.0015,
+          "fund_size": 1800000000,
+          "savings_plan_eligible": true,
+          "tradable": true,
+          "active_for_new_purchases": true
+        }
+      ]
+    }
+  ]
+}
