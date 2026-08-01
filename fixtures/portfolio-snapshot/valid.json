@@ -1,0 +1,49 @@
+{
+  "schema_version": "portfolio-snapshot/1.0",
+  "snapshot_id": "2026-08",
+  "revision": 1,
+  "as_of": "2026-08-31",
+  "generated_at": "2026-08-31T20:00:00+02:00",
+  "strategy": {
+    "name": "gpo-private-replication",
+    "version": "2026-08",
+    "source_observation_date": "2026-07-31",
+    "estimation_status": "mixed",
+    "confidence": "medium"
+  },
+  "portfolio": {
+    "currency": "EUR",
+    "market_value": 250000,
+    "monthly_contribution": 1500,
+    "additional_cash_available": 5000,
+    "target_equity_weight": 0.82,
+    "current_equity_weight": 0.792,
+    "equity_gap_amount": 7000
+  },
+  "exposures": [
+    {
+      "exposure_id": "emerging-markets",
+      "target_weight": 0.14,
+      "current_weight": 0.118,
+      "gap_amount": 5500,
+      "target_source": "estimated",
+      "active_purchase_instrument": "IE00TEST0001",
+      "mapped_instruments": ["IE00TEST0001", "IE00LEGACY01"],
+      "mapping_version": "2026-08"
+    }
+  ],
+  "purchase_scenarios": [
+    {
+      "scenario_id": "monthly-contribution-only",
+      "contribution_amount": 1500,
+      "additional_purchase_amount": 0
+    },
+    {
+      "scenario_id": "close-critical-gaps",
+      "contribution_amount": 1500,
+      "additional_purchase_amount": 5000
+    }
+  ],
+  "source_fingerprints": [],
+  "input_fingerprint": "sha256:281fc30919f6c003b3fc273629441042dcc584806d76b2e03dc70abfc75482fb"
+}
