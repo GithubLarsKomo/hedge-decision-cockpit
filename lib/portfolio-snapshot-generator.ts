@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   computePortfolioSnapshotFingerprint,
   portfolioSnapshotPayloadSchema,
@@ -7,7 +8,7 @@ import {
 
 export const monthlyPortfolioInputSchema = portfolioSnapshotPayloadSchema;
 
-export type MonthlyPortfolioInput = typeof portfolioSnapshotPayloadSchema['_output'];
+export type MonthlyPortfolioInput = z.infer<typeof monthlyPortfolioInputSchema>;
 
 export function generatePortfolioSnapshot(input: unknown): PortfolioSnapshot {
   const payload = monthlyPortfolioInputSchema.parse(input);
