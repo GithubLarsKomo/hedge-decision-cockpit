@@ -49,19 +49,13 @@ const purchaseScenarioSchema = z.object({
   additional_purchase_amount: z.number().finite().nonnegative()
 }).strict();
 
-export const portfolioSnapshotSchema = z.object({
-  schema_version: z.literal('portfolio-snapshot/1.0'),
-  snapshot_id: z.string().min(1),
-  revision: z.number().int().min(1),
-  as_of: z.string().regex(datePattern),
-  generated_at: z.string().datetime({ offset: true }),
-  strategy: strategySchema,
-  portfolio: portfolioSchema,
-  exposures: z.array(exposureSchema).min(1),
-  purchase_scenarios: z.array(purchaseScenarioSchema),
-  source_fingerprints: z.array(z.string().min(1)),
-  input_fingerprint: z.string().regex(fingerprintPattern)
-}).strict().superRefine((value, context) => {
+function addUniquenessIssues(
+  value: {
+    exposures: Array<{ exposure_id: string }>;
+    purchase_scenarios: Array<{ scenario_id: string }>;
+  },
+  context: z.RefinementCtx
+): void {
   const exposureIds = new Set<string>();
   for (const [index, exposure] of value.exposures.entries()) {
     if (exposureIds.has(exposure.exposure_id)) {
@@ -77,8 +71,36 @@ export const portfolioSnapshotSchema = z.object({
     }
     scenarioIds.add(scenario.scenario_id);
   }
-});
+}
 
+export const portfolioSnapshotPayloadSchema = z.object({
+  schema_version: z.literal('portfolio-snapshot/1.0'),
+  snapshot_id: z.string().min(1),
+  revision: z.number().int().min(1),
+  as_of: z.string().regex(datePattern),
+  generated_at: z.string().datetime({ offset: true }),
+  strategy: strategySchema,
+  portfolio: portfolioSchema,
+  exposures: z.array(exposureSchema).min(1),
+  purchase_scenarios: z.array(purchaseScenarioSchema),
+  source_fingerprints: z.array(z.string().min(1))
+}).strict().superRefine(addUniquenessIssues);
+
+export const portfolioSnapshotSchema = z.object({
+  schema_version: z.literal('portfolio-snapshot/1.0'),
+  snapshot_id: z.string().min(1),
+  revision: z.number().int().min(1),
+  as_of: z.string().regex(datePattern),
+  generated_at: z.string().datetime({ offset: true }),
+  strategy: strategySchema,
+  portfolio: portfolioSchema,
+  exposures: z.array(exposureSchema).min(1),
+  purchase_scenarios: z.array(purchaseScenarioSchema),
+  source_fingerprints: z.array(z.string().min(1)),
+  input_fingerprint: z.string().regex(fingerprintPattern)
+}).strict().superRefine(addUniquenessIssues);
+
+export type PortfolioSnapshotPayload = z.infer<typeof portfolioSnapshotPayloadSchema>;
 export type PortfolioSnapshot = z.infer<typeof portfolioSnapshotSchema>;
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
@@ -96,8 +118,9 @@ function sortJson(value: JsonValue): JsonValue {
 }
 
 export function canonicalizePortfolioSnapshot(value: unknown): string {
-  const parsed = portfolioSnapshotSchema.parse(value);
-  const { input_fingerprint: _fingerprint, ...payload } = parsed;
+  const candidate = value as { input_fingerprint?: unknown };
+  const { input_fingerprint: _fingerprint, ...payloadCandidate } = candidate;
+  const payload = portfolioSnapshotPayloadSchema.parse(payloadCandidate);
   return JSON.stringify(sortJson(payload as JsonValue));
 }
 
