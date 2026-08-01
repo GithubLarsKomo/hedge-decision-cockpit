@@ -28,7 +28,10 @@ describe('GPO target allocation contract', () => {
     const allocation = validateGpoTargetAllocation(readJson('fixtures/gpo-target-allocation/2026-08.json'));
     const changed = {
       ...allocation,
-      exposures: allocation.exposures.map((exposure) => ({ ...exposure, target_weight: 0.99 }))
+      exposures: [
+        { ...allocation.exposures[0], target_weight: 0.99 },
+        { exposure_id: 'additional-exposure', target_weight: 0.01 }
+      ]
     };
 
     assert.notEqual(
