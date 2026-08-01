@@ -47,6 +47,24 @@ model PortfolioSnapshot {
   decision            Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
 }
 
+model ImportedPortfolioSnapshot {
+  id               Int      @id @default(autoincrement())
+  createdAt        DateTime @default(now())
+  snapshotId       String   @db.VarChar(80)
+  revision         Int
+  asOf             DateTime @db.Date
+  generatedAt      DateTime
+  schemaVersion    String   @db.VarChar(40)
+  strategyName     String   @db.VarChar(120)
+  strategyVersion  String   @db.VarChar(80)
+  inputFingerprint String   @unique @db.VarChar(71)
+  payloadJson      Json
+
+  @@unique([snapshotId, revision])
+  @@index([asOf])
+  @@index([strategyName, strategyVersion])
+}
+
 model HedgePositionSnapshot {
   id                    Int      @id @default(autoincrement())
   decisionId            Int      @unique
