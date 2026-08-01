@@ -37,7 +37,7 @@ describe('monthly portfolio workflow', () => {
       result.allocation.monthlyContribution
     );
     assert.deepEqual(
-      result.decisionVariants.variants.map((variant) => variant.id),
+      result.decisionVariants.variants.map((variant) => variant.variantId),
       ['contribution-only', 'deploy-extra-cash']
     );
   });
@@ -55,8 +55,9 @@ describe('monthly portfolio workflow', () => {
 
   it('preserves optional hedge context in workflow decision variants without execution semantics', async () => {
     const result = await runMonthlyPortfolioWorkflow(exampleInput(), hedgeContext);
-    assert.deepEqual(result.decisionVariants.hedgeContext, hedgeContext);
-    assert.equal(result.decisionVariants.variants.at(-1)?.id, 'deploy-extra-cash-with-hedge-context');
+    const hedgeVariant = result.decisionVariants.variants.at(-1);
+    assert.equal(hedgeVariant?.variantId, 'deploy-extra-cash-with-hedge-context');
+    assert.deepEqual(hedgeVariant?.hedgeContext, hedgeContext);
     assert.equal('order' in result.decisionVariants, false);
     assert.equal('selectedVariant' in result.decisionVariants, false);
   });
