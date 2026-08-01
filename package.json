@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.76.0",
+  "version": "1.77.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -27,6 +27,8 @@
     "verify:audit-signing-registry-verification-receipt-signature": "tsx scripts/verify-execution-audit-signing-key-registry-verification-receipt-signature.ts",
     "generate:audit-signing-registry-release-manifest": "tsx scripts/generate-execution-audit-signing-key-registry-release-manifest.ts",
     "verify:audit-signing-registry-release-manifest": "tsx scripts/verify-execution-audit-signing-key-registry-release-manifest.ts",
+    "sign:audit-signing-registry-release-manifest": "tsx scripts/sign-execution-audit-signing-key-registry-release-manifest.ts",
+    "verify:audit-signing-registry-release-manifest-signature": "tsx scripts/verify-execution-audit-signing-key-registry-release-manifest-signature.ts",
     "verify:provenance": "node scripts/verify-container-provenance.mjs",
     "verify:sbom": "node scripts/verify-cyclonedx-sbom.mjs",
     "verify:evidence-bundle": "bash scripts/verify-supply-chain-bundle.sh",
