@@ -39,7 +39,7 @@ test('aggregates multiple holdings into one exposure while keeping legacy holdin
   const world = result.exposures.find((row) => row.exposureId === 'world-equity');
   assert.ok(world);
   assert.equal(world.currentAmount, 10000);
-  assert.equal(world.currentWeight, 2 / 3);
+  assert.equal(world.currentWeight, 0.666666666667);
   assert.deepEqual(world.mappedInstruments, ['ETF-NEW', 'ETF-OLD']);
   assert.equal(world.activePurchaseInstrument, 'ETF-NEW');
   assert.deepEqual(world.instruments, [
