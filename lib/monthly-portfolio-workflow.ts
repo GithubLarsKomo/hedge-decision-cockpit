@@ -1,3 +1,5 @@
+import { applyEtfNearestNeighbourMapping } from './etf-nearest-neighbour-mapping';
+import { applyGpoTargetAllocation } from './gpo-target-allocation';
 import { importPortfolioSnapshot, type ImportedPortfolioSnapshotRecord } from './imported-portfolio-snapshot';
 import { computeMonthlyPortfolioAllocation, type PortfolioAllocationResult } from './portfolio-allocation';
 import {
@@ -15,11 +17,26 @@ export type MonthlyPortfolioWorkflowResult = {
   decisionVariants: PortfolioDecisionVariantsResult;
 };
 
+export type MonthlyPortfolioWorkflowPreprocessing = {
+  gpoTargetAllocation?: unknown;
+  etfMapping?: unknown;
+};
+
 export async function runMonthlyPortfolioWorkflow(
   input: MonthlyPortfolioInput,
-  hedgeContext?: HedgeContext
+  hedgeContext?: HedgeContext,
+  preprocessing?: MonthlyPortfolioWorkflowPreprocessing
 ): Promise<MonthlyPortfolioWorkflowResult> {
-  const snapshot = generatePortfolioSnapshot(input);
+  let preparedInput = input;
+
+  if (preprocessing?.gpoTargetAllocation !== undefined) {
+    preparedInput = applyGpoTargetAllocation(preparedInput, preprocessing.gpoTargetAllocation);
+  }
+  if (preprocessing?.etfMapping !== undefined) {
+    preparedInput = applyEtfNearestNeighbourMapping(preparedInput, preprocessing.etfMapping);
+  }
+
+  const snapshot = generatePortfolioSnapshot(preparedInput);
   const imported = await importPortfolioSnapshot(snapshot);
   const allocation = computeMonthlyPortfolioAllocation(snapshot);
   const decisionVariants = buildPortfolioDecisionVariants(snapshot, allocation, hedgeContext);
