@@ -7,10 +7,12 @@ import { runMonthlyPortfolioWorkflow } from './monthly-portfolio-workflow';
 import type { HedgeContext } from './portfolio-decision-variants';
 import type { MonthlyPortfolioInput } from './portfolio-snapshot-generator';
 
+function readJson(path: string): unknown {
+  return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8'));
+}
+
 function exampleInput(): MonthlyPortfolioInput {
-  return JSON.parse(
-    readFileSync(join(process.cwd(), 'fixtures', 'portfolio-snapshot', 'monthly-input.json'), 'utf8')
-  ) as MonthlyPortfolioInput;
+  return readJson('fixtures/portfolio-snapshot/monthly-input.json') as MonthlyPortfolioInput;
 }
 
 const hedgeContext: HedgeContext = {
@@ -60,5 +62,24 @@ describe('monthly portfolio workflow', () => {
     assert.deepEqual(hedgeVariant?.hedgeContext, hedgeContext);
     assert.equal('order' in result.decisionVariants, false);
     assert.equal('selectedVariant' in result.decisionVariants, false);
+  });
+
+  it('applies GPO targets before ETF mapping and snapshot generation', async () => {
+    const gpoTargetAllocation = readJson('fixtures/gpo-target-allocation/2026-08.json');
+    const etfMapping = readJson('fixtures/etf-mapping/2026-08.json');
+
+    const result = await runMonthlyPortfolioWorkflow(exampleInput(), undefined, {
+      gpoTargetAllocation,
+      etfMapping
+    });
+
+    const exposure = result.snapshot.exposures[0];
+    assert.equal(exposure.target_weight, 1);
+    assert.equal(exposure.active_purchase_instrument, 'IE00BETTERFIT1');
+    assert.equal(exposure.mapping_version, '2026-08');
+    assert.ok(exposure.mapped_instruments.includes('IE00LEGACY01'));
+    assert.ok(result.snapshot.source_fingerprints.some((value) => value.startsWith('gpo-target-allocation:')));
+    assert.ok(result.snapshot.source_fingerprints.some((value) => value.startsWith('etf-mapping:')));
+    assert.equal(result.allocation.exposures[0].targetWeight, 1);
   });
 });
