@@ -23,6 +23,7 @@ export type PortfolioAllocationResult = {
 
 const toCents = (value: number): number => Math.round(value * 100);
 const fromCents = (value: number): number => value / 100;
+const normalizeMetric = (value: number): number => Math.round(value * 1e12) / 1e12;
 
 export function computeMonthlyPortfolioAllocation(value: unknown): PortfolioAllocationResult {
   const snapshot: PortfolioSnapshot = validatePortfolioSnapshot(value);
@@ -70,11 +71,16 @@ export function computeMonthlyPortfolioAllocation(value: unknown): PortfolioAllo
     exposureId: row.exposure.exposure_id,
     targetWeight: row.exposure.target_weight,
     currentWeight: row.exposure.current_weight,
-    driftPercentagePoints: (row.exposure.current_weight - row.exposure.target_weight) * 100,
+    driftPercentagePoints: normalizeMetric(
+      (row.exposure.current_weight - row.exposure.target_weight) * 100
+    ),
     relativeDrift:
       row.exposure.target_weight === 0
         ? null
-        : (row.exposure.current_weight - row.exposure.target_weight) / row.exposure.target_weight,
+        : normalizeMetric(
+            (row.exposure.current_weight - row.exposure.target_weight) /
+              row.exposure.target_weight
+          ),
     targetAmount: fromCents(row.targetAmountCents),
     currentAmount: fromCents(row.currentAmountCents),
     gapAmount: fromCents(row.gapCents),
