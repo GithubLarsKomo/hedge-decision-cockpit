@@ -118,8 +118,8 @@ function sortJson(value: JsonValue): JsonValue {
 }
 
 export function canonicalizePortfolioSnapshot(value: unknown): string {
-  const candidate = value as { input_fingerprint?: unknown };
-  const { input_fingerprint: _fingerprint, ...payloadCandidate } = candidate;
+  const payloadCandidate = { ...(value as Record<string, unknown>) };
+  delete payloadCandidate.input_fingerprint;
   const payload = portfolioSnapshotPayloadSchema.parse(payloadCandidate);
   return JSON.stringify(sortJson(payload as JsonValue));
 }
