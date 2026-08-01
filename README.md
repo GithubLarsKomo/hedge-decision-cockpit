@@ -50,6 +50,33 @@ Die GitHub-Action führt diese Prüfungen bei Pull Requests und Pushes auf `main
 
 Die kanonische, getestete Regelengine liegt in `lib/decision-engine.ts` und trägt eine explizite `ruleVersion`. Der n8n-Code in `n8n/decision-engine.js` bildet dieselben Regeln für den Workflow ab. Jeder gespeicherte Lauf kann `triggeredRules`, Datenquelle, Beobachtungszeit und einen SHA-256-Fingerprint enthalten.
 
+## Portfolio-Engine-Integration
+
+Das Cockpit übernimmt **nicht** die Rekonstruktion der strategischen Zielallokation. Die vorgelagerte Portfolio-Engine erzeugt einen versionierten `portfolio-snapshot/1.0`; das Cockpit validiert, persistiert und verwendet diesen Snapshot nur als Portfolio-Kontext für die taktische Hedge-Entscheidung.
+
+Kanonische Grenzen:
+
+- Portfolio-Vertrag und Fingerprint: `lib/portfolio-snapshot.ts`
+- lokaler Monatslauf: `npm run run:monthly-portfolio -- <monthly-input.json>`
+- kombinierter Monatsbericht: `npm run run:monthly-decision-report -- <monthly-input.json> [hedge-context.json]`
+- HTTP-Import: `POST /api/portfolio-snapshots/import`
+- Exposure-Aggregation: `lib/exposure-mapping.ts`
+- versioniertes ETF-Mapping und Nearest-Neighbour-Ranking: `lib/etf-nearest-neighbour-mapping.ts` und `lib/nearest-neighbour-ranking.ts`
+- Portfolio→Hedge-E2E-Seam: `lib/portfolio-hedge-integration.ts`
+- taktische Hedge-Regelengine: `lib/decision-engine.ts`
+
+Der monatliche Ablauf ist bewusst zweistufig:
+
+1. strategische Zielallokation und Instrument-Mapping lokal aktualisieren;
+2. Snapshot erzeugen und per SHA-256 unveränderlich referenzieren;
+3. Snapshot idempotent im Cockpit importieren;
+4. Drift, Sparrate und zusätzliche Cash-Varianten berechnen;
+5. taktische Marktsignale (`drawdownPercent`, `vixPercentile`, optional `hedgeCoveragePercent`) separat erfassen;
+6. validierten Snapshot und diese Signale über `evaluatePortfolioHedgeDecision` an die bestehende Hedge-Regelengine übergeben;
+7. Portfolio- und Hedge-Ergebnis dokumentieren und menschlich entscheiden.
+
+Portfolio-Daten erzeugen keine Marktsignale und Marktsignale verändern den Portfolio-Snapshot nicht. Ein ETF-Wechsel wird nicht allein durch eine geringfügig niedrigere TER ausgelöst. Kein Integrationspfad erzeugt automatisch Broker-Orders oder Execution Requests.
+
 ## API-Ingest
 
 ```bash
