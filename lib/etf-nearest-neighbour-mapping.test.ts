@@ -46,7 +46,9 @@ describe('ETF nearest-neighbour mapping', () => {
   });
 
   it('rejects an untradable selected candidate', () => {
-    const raw = readJson('fixtures/etf-mapping/2026-08.json') as any;
+    const raw = readJson('fixtures/etf-mapping/2026-08.json') as {
+      exposures: Array<{ candidates: Array<{ tradable: boolean }> }>;
+    };
     raw.exposures[0].candidates[1].tradable = false;
     assert.throws(() => validateEtfNearestNeighbourMapping(raw));
   });
