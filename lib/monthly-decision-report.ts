@@ -1,10 +1,11 @@
-import { buildPortfolioDecisionVariants, type HedgeContext, type PortfolioDecisionVariantsResult } from './portfolio-decision-variants';
-import { runMonthlyPortfolioWorkflow, type MonthlyPortfolioWorkflowResult } from './monthly-portfolio-workflow';
+import type { HedgeContext } from './portfolio-decision-variants';
+import {
+  runMonthlyPortfolioWorkflow,
+  type MonthlyPortfolioWorkflowResult
+} from './monthly-portfolio-workflow';
 import type { MonthlyPortfolioInput } from './portfolio-snapshot-generator';
 
-export type MonthlyDecisionReport = MonthlyPortfolioWorkflowResult & {
-  decisionVariants: PortfolioDecisionVariantsResult;
-};
+export type MonthlyDecisionReport = MonthlyPortfolioWorkflowResult;
 
 function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -22,14 +23,7 @@ export async function buildMonthlyDecisionReport(
   input: MonthlyPortfolioInput,
   hedgeContext?: HedgeContext
 ): Promise<MonthlyDecisionReport> {
-  const workflow = await runMonthlyPortfolioWorkflow(input);
-  const decisionVariants = buildPortfolioDecisionVariants(
-    workflow.snapshot,
-    workflow.allocation,
-    hedgeContext
-  );
-
-  return { ...workflow, decisionVariants };
+  return runMonthlyPortfolioWorkflow(input, hedgeContext);
 }
 
 export function stableSerializeMonthlyDecisionReport(value: MonthlyDecisionReport): string {

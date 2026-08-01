@@ -8,9 +8,14 @@ import type { MonthlyPortfolioInput } from './portfolio-snapshot-generator';
 import type { HedgeContext } from './portfolio-decision-variants';
 
 function exampleInput(): MonthlyPortfolioInput {
-  return JSON.parse(
+  const input = JSON.parse(
     readFileSync(join(process.cwd(), 'fixtures', 'portfolio-snapshot', 'monthly-input.json'), 'utf8')
   ) as MonthlyPortfolioInput;
+
+  return {
+    ...input,
+    snapshot_id: `${input.snapshot_id}-decision-report`
+  };
 }
 
 const hedgeContext: HedgeContext = {
