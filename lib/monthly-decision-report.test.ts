@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { beforeEach, describe, it } from 'node:test';
+import { prisma } from './prisma';
+import { buildMonthlyDecisionReport, stableSerializeMonthlyDecisionReport } from './monthly-decision-report';
+import type { MonthlyPortfolioInput } from './portfolio-snapshot-generator';
+import type { HedgeContext } from './portfolio-decision-variants';
+
+function exampleInput(): MonthlyPortfolioInput {
+  return JSON.parse(
+    readFileSync(join(process.cwd(), 'fixtures', 'portfolio-snapshot', 'monthly-input.json'), 'utf8')
+  ) as MonthlyPortfolioInput;
+}
+
+const hedgeContext: HedgeContext = {
+  risk_regime: 'elevated',
+  recommended_hedge_ratio: 0.15,
+  hedge_notional_eur: 12500,
+  confidence: 'medium',
+  reasons: ['drawdown', 'volatility']
+};
+
+describe('monthly decision report', () => {
+  beforeEach(async () => {
+    await prisma.importedPortfolioSnapshot.deleteMany();
+  });
+
+  it('combines the canonical monthly workflow with canonical decision variants', async () => {
+    const report = await buildMonthlyDecisionReport(exampleInput(), hedgeContext);
+
+    assert.equal(report.import.created, true);
+    assert.equal(report.snapshot.snapshot_id, report.decisionVariants.snapshotId);
+    assert.equal(report.snapshot.revision, report.decisionVariants.revision);
+    assert.equal(report.allocation.currency, report.decisionVariants.currency);
+    assert.equal(report.decisionVariants.variants.length, 3);
+    assert.deepEqual(report.decisionVariants.variants[2].hedgeContext, hedgeContext);
+    assert.equal('selectedVariant' in report, false);
+    assert.equal('order' in report, false);
+  });
+
+  it('is idempotent and stably serializable after the snapshot already exists', async () => {
+    await buildMonthlyDecisionReport(exampleInput(), hedgeContext);
+    const first = await buildMonthlyDecisionReport(exampleInput(), hedgeContext);
+    const second = await buildMonthlyDecisionReport(exampleInput(), hedgeContext);
+
+    assert.equal(first.import.created, false);
+    assert.equal(second.import.created, false);
+    assert.equal(first.import.id, second.import.id);
+    assert.equal(
+      stableSerializeMonthlyDecisionReport(first),
+      stableSerializeMonthlyDecisionReport(second)
+    );
+  });
+});
