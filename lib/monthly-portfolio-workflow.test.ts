@@ -25,7 +25,9 @@ const hedgeContext: HedgeContext = {
 
 describe('monthly portfolio workflow', () => {
   beforeEach(async () => {
-    await prisma.importedPortfolioSnapshot.deleteMany();
+    await prisma.importedPortfolioSnapshot.deleteMany({
+      where: { snapshotId: '2026-08' }
+    });
   });
 
   it('generates, persists, allocates and produces decision variants', async () => {
