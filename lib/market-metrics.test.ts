@@ -3,7 +3,7 @@ import test from 'node:test';
 import { computeDrawdownPercent } from './market-metrics';
 
 test('computeDrawdownPercent returns deterministic percentage from current and high', () => {
-  assert.equal(computeDrawdownPercent(900, 1000), -10);
+  assert.ok(Math.abs(computeDrawdownPercent(900, 1000) - (-10)) < 1e-12);
   assert.equal(computeDrawdownPercent(1000, 1000), 0);
 });
 
