@@ -7,10 +7,12 @@ import { buildMonthlyDecisionReport, stableSerializeMonthlyDecisionReport } from
 import type { MonthlyPortfolioInput } from './portfolio-snapshot-generator';
 import type { HedgeContext } from './portfolio-decision-variants';
 
+function readJson(path: string): unknown {
+  return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8'));
+}
+
 function exampleInput(): MonthlyPortfolioInput {
-  const input = JSON.parse(
-    readFileSync(join(process.cwd(), 'fixtures', 'portfolio-snapshot', 'monthly-input.json'), 'utf8')
-  ) as MonthlyPortfolioInput;
+  const input = readJson('fixtures/portfolio-snapshot/monthly-input.json') as MonthlyPortfolioInput;
 
   return {
     ...input,
@@ -42,6 +44,21 @@ describe('monthly decision report', () => {
     assert.deepEqual(report.decisionVariants.variants[2].hedgeContext, hedgeContext);
     assert.equal('selectedVariant' in report, false);
     assert.equal('order' in report, false);
+  });
+
+  it('applies local GPO targets and ETF mapping through the canonical report path', async () => {
+    const report = await buildMonthlyDecisionReport(exampleInput(), hedgeContext, {
+      gpoTargetAllocation: readJson('fixtures/gpo-target-allocation/2026-08.json'),
+      etfMapping: readJson('fixtures/etf-mapping/2026-08.json')
+    });
+
+    const exposure = report.snapshot.exposures[0];
+    assert.equal(exposure.target_weight, 1);
+    assert.equal(exposure.active_purchase_instrument, 'IE00BETTERFIT1');
+    assert.ok(exposure.mapped_instruments.includes('IE00LEGACY01'));
+    assert.ok(report.snapshot.source_fingerprints.some((value) => value.startsWith('gpo-target-allocation:')));
+    assert.ok(report.snapshot.source_fingerprints.some((value) => value.startsWith('etf-mapping:')));
+    assert.deepEqual(report.decisionVariants.variants.at(-1)?.hedgeContext, hedgeContext);
   });
 
   it('is idempotent and stably serializable after the snapshot already exists', async () => {
