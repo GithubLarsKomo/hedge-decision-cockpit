@@ -93,7 +93,7 @@ describe('monthly portfolio run bundle', () => {
     assert.deepEqual(prepared.preprocessing.gpoSourceEvidence, bundle.members.gpo_source_evidence.value);
     assert.deepEqual(prepared.preprocessing.etfMapping, bundle.members.etf_mapping.value);
     assert.deepEqual(prepared.preprocessing.etfMappingReview, {
-      as_of: bundle.as_of,
+      asOf: bundle.as_of,
       policy: bundle.etf_mapping_review_policy
     });
     assert.match(prepared.bundleFingerprint, /^sha256:[a-f0-9]{64}$/);
