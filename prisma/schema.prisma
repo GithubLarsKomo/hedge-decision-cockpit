@@ -65,6 +65,26 @@ model ImportedPortfolioSnapshot {
   @@index([strategyName, strategyVersion])
 }
 
+model EtfMappingReviewRecord {
+  id                          Int      @id @default(autoincrement())
+  createdAt                   DateTime @default(now())
+  recordFingerprint           String   @unique @db.VarChar(71)
+  schemaVersion               String   @db.VarChar(40)
+  currentMappingVersion       String   @db.VarChar(80)
+  currentMappingFingerprint   String   @db.VarChar(71)
+  candidateMappingVersion     String?  @db.VarChar(80)
+  candidateMappingFingerprint String?  @db.VarChar(71)
+  outcome                     String   @db.VarChar(32)
+  reviewer                    String   @db.VarChar(160)
+  reviewedAt                  DateTime
+  rationale                   String   @db.Text
+  payloadJson                 Json
+
+  @@index([reviewedAt])
+  @@index([currentMappingFingerprint, reviewedAt])
+  @@index([outcome])
+}
+
 model HedgePositionSnapshot {
   id                    Int      @id @default(autoincrement())
   decisionId            Int      @unique
