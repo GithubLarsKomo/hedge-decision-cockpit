@@ -32,7 +32,7 @@ export default async function MonthlyOperatorHome() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold text-slate-950">Monatslauf vorbereiten</h1>
-            <p className="mt-2 max-w-2xl text-slate-600">Ein Einstiegspunkt für Portfolio-Stand, ETF-Review und Hedge-Entscheidung. Diese Seite ist bewusst read-only.</p>
+            <p className="mt-2 max-w-2xl text-slate-600">Ein Einstiegspunkt für Portfolio-Stand, ETF-Review und Hedge-Entscheidung.</p>
           </div>
           <Link href="/" className="text-sm font-medium text-slate-700 underline underline-offset-4">Zum bisherigen Dashboard</Link>
         </div>
@@ -63,10 +63,10 @@ export default async function MonthlyOperatorHome() {
 
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
         <h2 className="text-lg font-semibold text-slate-950">Nächster Schritt</h2>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">Der geführte Browser-Workflow wird hier schrittweise ergänzt. Bis dahin bleiben die bestehenden deterministischen CLI-/Bundle-Pfade der kanonische Ausführungsweg.</p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">Der geführte Browser-Workflow zeigt jetzt Readiness und Blocker für den vollständigen Monatslauf. Schreibende Schritte werden weiterhin nur explizit und Human-in-the-loop ergänzt.</p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/" className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Aktuelle Entscheidungen prüfen</Link>
-          <span className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-500">Geführten Monatslauf starten · folgt in UX-002</span>
+          <Link href="/monthly/run" className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Geführten Monatslauf starten</Link>
+          <Link href="/" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">Aktuelle Entscheidungen prüfen</Link>
         </div>
       </section>
     </main>
