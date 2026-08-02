@@ -69,24 +69,25 @@ async function savePortfolioSnapshot(formData: FormData) {
     source_fingerprints: csv(text(formData, 'source_fingerprints'))
   };
 
+  let result;
   try {
     const input_fingerprint = computePortfolioSnapshotFingerprint(payload);
-    const result = await importPortfolioSnapshot({ ...payload, input_fingerprint });
-    revalidatePath('/monthly');
-    revalidatePath('/monthly/run');
-    redirect(`/monthly/run?portfolio=${result.created ? 'created' : 'unchanged'}&snapshot=${encodeURIComponent(result.snapshotId)}`);
+    result = await importPortfolioSnapshot({ ...payload, input_fingerprint });
   } catch (error) {
+    let message = 'Unbekannter Fehler';
     if (error instanceof PortfolioSnapshotConflictError) {
-      redirect(`/monthly/run/portfolio?error=${encodeURIComponent(error.message)}`);
+      message = error.message;
+    } else if (error instanceof ZodError) {
+      message = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ');
+    } else if (error instanceof Error) {
+      message = error.message;
     }
-    if (error instanceof ZodError || error instanceof Error) {
-      const message = error instanceof ZodError
-        ? error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ')
-        : error.message;
-      redirect(`/monthly/run/portfolio?error=${encodeURIComponent(message)}`);
-    }
-    redirect('/monthly/run/portfolio?error=Unbekannter%20Fehler');
+    redirect(`/monthly/run/portfolio?error=${encodeURIComponent(message)}`);
   }
+
+  revalidatePath('/monthly');
+  revalidatePath('/monthly/run');
+  redirect(`/monthly/run?portfolio=${result.created ? 'created' : 'unchanged'}&snapshot=${encodeURIComponent(result.snapshotId)}`);
 }
 
 export default async function PortfolioInputPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
