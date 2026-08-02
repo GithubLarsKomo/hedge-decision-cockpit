@@ -1,6 +1,7 @@
 import type { HedgeContext } from './portfolio-decision-variants';
 import {
   runMonthlyPortfolioWorkflow,
+  type MonthlyPortfolioWorkflowPreprocessing,
   type MonthlyPortfolioWorkflowResult
 } from './monthly-portfolio-workflow';
 import type { MonthlyPortfolioInput } from './portfolio-snapshot-generator';
@@ -21,9 +22,10 @@ function stableValue(value: unknown): unknown {
 
 export async function buildMonthlyDecisionReport(
   input: MonthlyPortfolioInput,
-  hedgeContext?: HedgeContext
+  hedgeContext?: HedgeContext,
+  preprocessing?: MonthlyPortfolioWorkflowPreprocessing
 ): Promise<MonthlyDecisionReport> {
-  return runMonthlyPortfolioWorkflow(input, hedgeContext);
+  return runMonthlyPortfolioWorkflow(input, hedgeContext, preprocessing);
 }
 
 export function stableSerializeMonthlyDecisionReport(value: MonthlyDecisionReport): string {
