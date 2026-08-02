@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.94.0",
+  "version": "1.97.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
     "test:runtime": "node scripts/runtime-smoke-test.mjs",
     "run:monthly-portfolio": "tsx scripts/run-monthly-portfolio-workflow.ts",
     "run:monthly-decision-report": "tsx scripts/run-monthly-decision-report.ts",
+    "run:monthly-bundle-decision-report": "tsx scripts/run-monthly-bundle-decision-report.ts",
     "generate:audit-evidence": "tsx scripts/generate-execution-audit-evidence.ts",
     "verify:audit-evidence": "tsx scripts/verify-execution-audit-evidence.ts",
     "sign:audit-evidence": "tsx scripts/sign-execution-audit-evidence.ts",
