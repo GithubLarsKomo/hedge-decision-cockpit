@@ -10,7 +10,7 @@ import {
   prepareMonthlyPortfolioRunBundle,
   validateMonthlyPortfolioRunBundle
 } from './monthly-portfolio-run-bundle';
-import type { MonthlyPortfolioInput } from './portfolio-snapshot-generator';
+import { generatePortfolioSnapshot, type MonthlyPortfolioInput } from './portfolio-snapshot-generator';
 
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8'));
@@ -27,7 +27,8 @@ function fixtureBundle() {
     as_of: '2026-09-30',
     members: {
       monthly_portfolio_input: {
-        value: monthlyInput
+        value: monthlyInput,
+        fingerprint: generatePortfolioSnapshot(monthlyInput).input_fingerprint
       },
       gpo_target_allocation: {
         value: gpoTargetAllocation,
