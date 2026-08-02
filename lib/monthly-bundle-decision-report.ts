@@ -4,6 +4,7 @@ import {
   type MonthlyDecisionReport
 } from './monthly-decision-report';
 import { listEtfMappingReviewHistory } from './etf-mapping-review-history';
+import { computeEtfMappingFingerprint } from './etf-nearest-neighbour-mapping';
 import { prepareMonthlyPortfolioRunBundle } from './monthly-portfolio-run-bundle';
 
 export type MonthlyBundleDecisionReport = MonthlyDecisionReport & {
@@ -31,12 +32,8 @@ export async function buildMonthlyBundleDecisionReport(
     prepared.preprocessing
   );
 
-  const mappingFingerprint = prepared.preprocessing?.etf_mapping
-    ? report.provenance.etfMapping?.mapping_fingerprint
-    : undefined;
-  const latestReview = mappingFingerprint
-    ? (await listEtfMappingReviewHistory(mappingFingerprint))[0]
-    : undefined;
+  const mappingFingerprint = computeEtfMappingFingerprint(prepared.preprocessing.etfMapping);
+  const latestReview = (await listEtfMappingReviewHistory(mappingFingerprint))[0];
 
   return {
     ...report,
