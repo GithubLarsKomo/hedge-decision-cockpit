@@ -10,6 +10,7 @@ import {
 import {
   computeEtfMappingFingerprint
 } from './etf-nearest-neighbour-mapping';
+import { persistEtfMappingReviewRecord } from './etf-mapping-review-history';
 import { computeGpoSourceEvidenceFingerprint } from './gpo-source-evidence';
 import { computeGpoTargetAllocationFingerprint } from './gpo-target-allocation';
 import { computePortfolioSnapshotFingerprint } from './portfolio-snapshot';
@@ -62,6 +63,7 @@ function fixtureBundle() {
 describe('monthly bundle decision report', () => {
   beforeEach(async () => {
     await prisma.importedPortfolioSnapshot.deleteMany({ where: { snapshotId: '2026-08' } });
+    await prisma.etfMappingReviewRecord.deleteMany();
   });
 
   it('runs the canonical monthly report from a validated bundle and records the bundle fingerprint', async () => {
@@ -71,8 +73,62 @@ describe('monthly bundle decision report', () => {
     assert.equal(report.snapshot.snapshot_id, '2026-08');
     assert.equal(report.provenance.etfMappingReview?.as_of, '2026-09-30');
     assert.equal(report.decisionVariants.variants.at(-1)?.variantId, 'deploy-extra-cash-with-hedge-context');
+    assert.equal(report.etfMappingHumanReview, undefined);
     assert.equal('order' in report, false);
     assert.equal('selectedVariant' in report, false);
+  });
+
+  it('surfaces only the latest matching human ETF mapping review without switching automatically', async () => {
+    const bundle = fixtureBundle();
+    const mappingFingerprint = bundle.members.etf_mapping.fingerprint;
+
+    await persistEtfMappingReviewRecord({
+      schema_version: 'etf-mapping-review-record/1.0',
+      current_mapping: { mapping_version: '2026-08', mapping_fingerprint: mappingFingerprint },
+      outcome: 'defer',
+      reviewer: 'portfolio-owner',
+      reviewed_at: '2026-09-01T09:30:00.000Z',
+      rationale: 'Wait for more evidence.'
+    });
+    await persistEtfMappingReviewRecord({
+      schema_version: 'etf-mapping-review-record/1.0',
+      current_mapping: { mapping_version: '2026-08', mapping_fingerprint: mappingFingerprint },
+      candidate_mapping: {
+        mapping_version: '2026-09',
+        mapping_fingerprint: `sha256:${'b'.repeat(64)}`
+      },
+      outcome: 'accept_replacement',
+      reviewer: 'portfolio-owner',
+      reviewed_at: '2026-09-29T09:30:00.000Z',
+      rationale: 'Replacement approved for a future mapping version.'
+    });
+
+    const report = await buildMonthlyBundleDecisionReport(bundle);
+
+    assert.equal(report.etfMappingHumanReview?.outcome, 'accept_replacement');
+    assert.equal(report.etfMappingHumanReview?.currentMappingFingerprint, mappingFingerprint);
+    assert.equal(report.etfMappingHumanReview?.reviewer, 'portfolio-owner');
+    assert.equal(report.etfMappingHumanReview?.reviewedAt, '2026-09-29T09:30:00.000Z');
+    assert.equal('order' in report, false);
+    assert.equal('selectedVariant' in report, false);
+  });
+
+  it('does not leak review history from an unrelated mapping fingerprint', async () => {
+    const bundle = fixtureBundle();
+    await persistEtfMappingReviewRecord({
+      schema_version: 'etf-mapping-review-record/1.0',
+      current_mapping: {
+        mapping_version: 'unrelated',
+        mapping_fingerprint: `sha256:${'c'.repeat(64)}`
+      },
+      outcome: 'keep_current',
+      reviewer: 'portfolio-owner',
+      reviewed_at: '2026-09-29T10:00:00.000Z',
+      rationale: 'Unrelated mapping review.'
+    });
+
+    const report = await buildMonthlyBundleDecisionReport(bundle);
+    assert.equal(report.etfMappingHumanReview, undefined);
   });
 
   it('rejects an invalid member fingerprint before persistence', async () => {
@@ -83,8 +139,18 @@ describe('monthly bundle decision report', () => {
     assert.equal(await prisma.importedPortfolioSnapshot.count({ where: { snapshotId: '2026-08' } }), 0);
   });
 
-  it('is stably serializable for the same bundle after persistence', async () => {
+  it('is stably serializable for the same bundle and matching human review', async () => {
     const bundle = fixtureBundle();
+    const mappingFingerprint = bundle.members.etf_mapping.fingerprint;
+    await persistEtfMappingReviewRecord({
+      schema_version: 'etf-mapping-review-record/1.0',
+      current_mapping: { mapping_version: '2026-08', mapping_fingerprint: mappingFingerprint },
+      outcome: 'keep_current',
+      reviewer: 'portfolio-owner',
+      reviewed_at: '2026-09-29T09:30:00.000Z',
+      rationale: 'Current mapping remains appropriate.'
+    });
+
     await buildMonthlyBundleDecisionReport(bundle);
     const first = await buildMonthlyBundleDecisionReport(bundle);
     const second = await buildMonthlyBundleDecisionReport(bundle);
