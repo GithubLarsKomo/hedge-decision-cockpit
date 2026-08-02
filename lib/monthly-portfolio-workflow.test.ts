@@ -82,4 +82,39 @@ describe('monthly portfolio workflow', () => {
     assert.ok(result.snapshot.source_fingerprints.some((value) => value.startsWith('etf-mapping:')));
     assert.equal(result.allocation.exposures[0].targetWeight, 1);
   });
+
+  it('surfaces bound GPO evidence and deterministic ETF mapping review status', async () => {
+    const gpoTargetAllocation = readJson('fixtures/gpo-target-allocation/2026-08.json');
+    const gpoSourceEvidence = readJson('fixtures/gpo-source-evidence/2026-08.json');
+    const etfMapping = readJson('fixtures/etf-mapping/2026-08.json');
+
+    const result = await runMonthlyPortfolioWorkflow(exampleInput(), hedgeContext, {
+      gpoTargetAllocation,
+      gpoSourceEvidence,
+      etfMapping,
+      etfMappingReview: {
+        as_of: '2026-09-30',
+        policy: {
+          review_interval_days: 30,
+          overdue_grace_days: 7
+        }
+      }
+    });
+
+    assert.ok(result.provenance.gpoSourceEvidenceFingerprint);
+    assert.ok(
+      result.snapshot.source_fingerprints.includes(
+        `gpo-source-evidence:${result.provenance.gpoSourceEvidenceFingerprint}`
+      )
+    );
+    assert.equal(result.provenance.etfMappingReview?.mapping_version, '2026-08');
+    assert.equal(result.provenance.etfMappingReview?.as_of, '2026-09-30');
+    assert.equal(result.provenance.etfMappingReview?.status, 'due');
+
+    const hedgeVariant = result.decisionVariants.variants.at(-1);
+    assert.equal(hedgeVariant?.variantId, 'deploy-extra-cash-with-hedge-context');
+    assert.deepEqual(hedgeVariant?.hedgeContext, hedgeContext);
+    assert.equal('order' in result.decisionVariants, false);
+    assert.equal('selectedVariant' in result.decisionVariants, false);
+  });
 });
