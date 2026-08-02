@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { buildMonthlyDecisionReport, stableSerializeMonthlyDecisionReport } from '../lib/monthly-decision-report';
 import type { HedgeContext } from '../lib/portfolio-decision-variants';
+import type { MonthlyPortfolioInput } from '../lib/portfolio-snapshot-generator';
 
 const args = process.argv.slice(2);
 const inputPath = args[0];
@@ -50,7 +51,7 @@ function readJson(path: string): unknown {
 
 async function main(): Promise<void> {
   const { hedgePath, gpoTargetPath, etfMappingPath } = parseOptionalPaths(args);
-  const input = readJson(inputPath);
+  const input = readJson(inputPath) as MonthlyPortfolioInput;
   const hedgeContext = hedgePath ? (readJson(hedgePath) as HedgeContext) : undefined;
   const preprocessing = gpoTargetPath || etfMappingPath
     ? {
