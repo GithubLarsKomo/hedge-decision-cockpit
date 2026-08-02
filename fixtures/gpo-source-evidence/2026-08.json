@@ -7,6 +7,6 @@
   "retrieved_at": "2026-08-01T08:00:00+02:00",
   "extraction_method": "manual",
   "content_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-  "supported_allocation_fingerprint": "4aa721095bbe6ceedef81b934c51f184b6adf4ab659b87eb9f2cf7b02fb10440",
+  "supported_allocation_fingerprint": "353cabcdc2750fbf732b9533551188744043fd62df3af001b16e6f1523c46e70",
   "notes": "Canonical local evidence fixture for the August 2026 target allocation."
 }
