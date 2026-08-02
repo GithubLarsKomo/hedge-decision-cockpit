@@ -42,6 +42,7 @@ describe('monthly portfolio workflow', () => {
       result.decisionVariants.variants.map((variant) => variant.variantId),
       ['contribution-only', 'deploy-extra-cash']
     );
+    assert.deepEqual(result.provenance, {});
   });
 
   it('is idempotent when the same monthly input is run twice', async () => {
@@ -53,6 +54,7 @@ describe('monthly portfolio workflow', () => {
     assert.equal(second.snapshot.input_fingerprint, first.snapshot.input_fingerprint);
     assert.deepEqual(second.allocation, first.allocation);
     assert.deepEqual(second.decisionVariants, first.decisionVariants);
+    assert.deepEqual(second.provenance, first.provenance);
   });
 
   it('preserves optional hedge context in workflow decision variants without execution semantics', async () => {
@@ -81,5 +83,50 @@ describe('monthly portfolio workflow', () => {
     assert.ok(result.snapshot.source_fingerprints.some((value) => value.startsWith('gpo-target-allocation:')));
     assert.ok(result.snapshot.source_fingerprints.some((value) => value.startsWith('etf-mapping:')));
     assert.equal(result.allocation.exposures[0].targetWeight, 1);
+  });
+
+  it('surfaces immutable source evidence and deterministic ETF mapping review state', async () => {
+    const gpoTargetAllocation = readJson('fixtures/gpo-target-allocation/2026-08.json');
+    const gpoSourceEvidence = readJson('fixtures/gpo-source-evidence/2026-08.json');
+    const etfMapping = readJson('fixtures/etf-mapping/2026-08.json');
+
+    const result = await runMonthlyPortfolioWorkflow(exampleInput(), undefined, {
+      gpoTargetAllocation,
+      gpoSourceEvidence,
+      etfMapping,
+      etfMappingReview: {
+        asOf: '2026-11-29',
+        policy: { review_interval_days: 90, overdue_grace_days: 14 }
+      }
+    });
+
+    assert.match(result.provenance.gpoSourceEvidenceFingerprint ?? '', /^[a-f0-9]{64}$/);
+    assert.equal(result.provenance.etfMappingReview?.status, 'due');
+    assert.equal(result.provenance.etfMappingReview?.next_review_date, '2026-11-29');
+    assert.ok(result.snapshot.source_fingerprints.some((value) => value.startsWith('gpo-source-evidence:')));
+    assert.equal('order' in result.decisionVariants, false);
+    assert.equal('selectedVariant' in result.decisionVariants, false);
+  });
+
+  it('rejects provenance inputs without their required canonical dependencies', async () => {
+    const gpoSourceEvidence = readJson('fixtures/gpo-source-evidence/2026-08.json');
+    const etfMapping = readJson('fixtures/etf-mapping/2026-08.json');
+
+    await assert.rejects(
+      runMonthlyPortfolioWorkflow(exampleInput(), undefined, { gpoSourceEvidence }),
+      /requires a GPO target allocation/
+    );
+    await assert.rejects(
+      runMonthlyPortfolioWorkflow(exampleInput(), undefined, {
+        etfMappingReview: {
+          asOf: '2026-11-29',
+          policy: { review_interval_days: 90, overdue_grace_days: 14 }
+        }
+      }),
+      /requires an ETF mapping/
+    );
+
+    const valid = await runMonthlyPortfolioWorkflow(exampleInput(), undefined, { etfMapping });
+    assert.deepEqual(valid.provenance, {});
   });
 });
