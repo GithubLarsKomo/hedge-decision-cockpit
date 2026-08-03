@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "rule": { "interval": [{ "field": "cronExpression", "expression": "30 16 * * 1-5" }] }
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "30 22 * * 1-5" }] }
       },
       "id": "schedule",
       "name": "Weekday Schedule",
