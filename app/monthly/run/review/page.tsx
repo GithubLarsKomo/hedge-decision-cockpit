@@ -34,12 +34,13 @@ async function completeMonthlyRun(formData: FormData) {
   'use server';
   const actor = String(formData.get('actor') ?? '').trim();
   const rationale = String(formData.get('rationale') ?? '').trim();
+  let result: Awaited<ReturnType<typeof persistMonthlyRunCompletion>>;
 
   try {
     const { snapshot, decision, review } = await loadReviewState();
     if (!snapshot) throw new Error('Portfolio-Snapshot fehlt.');
     if (!decision) throw new Error('Hedge-Entscheidung fehlt.');
-    const result = await persistMonthlyRunCompletion({
+    result = await persistMonthlyRunCompletion({
       snapshot_fingerprint: snapshot.inputFingerprint,
       decision_id: decision.id,
       ...(review ? { mapping_review_fingerprint: review.recordFingerprint } : {}),
@@ -47,11 +48,12 @@ async function completeMonthlyRun(formData: FormData) {
       rationale,
       completed_at: new Date().toISOString()
     });
-    return redirect(`/monthly/run?completion=${result.created ? 'created' : 'replayed'}&completionId=${result.entry.id}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Monatsabschluss fehlgeschlagen.';
     redirect(`/monthly/run/review?error=${encodeURIComponent(message)}`);
   }
+
+  redirect(`/monthly/run?completion=${result.created ? 'created' : 'replayed'}&completionId=${result.entry.id}`);
 }
 
 export default async function MonthlyDecisionReviewPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
