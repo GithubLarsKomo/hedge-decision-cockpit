@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.108.0",
+  "version": "1.109.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -37,7 +37,7 @@
     "verify:audit-signing-registry-release-bundle": "tsx scripts/verify-execution-audit-signing-key-registry-release-bundle.ts",
     "create:audit-signing-registry-release-bundle-verification-receipt": "tsx scripts/create-execution-audit-signing-key-registry-release-bundle-verification-receipt.ts",
     "sign:audit-signing-registry-release-bundle-verification-receipt": "tsx scripts/sign-execution-audit-signing-key-registry-release-bundle-verification-receipt.ts",
-    "verify:audit-signing-registry-release-bundle-verification-receipt-signature-registry": "tsx scripts/verify-execution-audit-signing-registry-release-bundle-verification-receipt-signature-registry.ts",
+    "verify:audit-signing-registry-release-bundle-verification-receipt-signature-registry": "tsx scripts/verify-execution-audit-signing-key-registry-release-bundle-verification-receipt-signature-registry.ts",
     "approve:audit-signing-registry-release-bundle": "tsx scripts/approve-execution-audit-signing-key-registry-release-bundle.ts",
     "verify:audit-signing-registry-archived-release-approval": "tsx scripts/verify-execution-audit-signing-registry-archived-release-approval.ts",
     "verify:provenance": "node scripts/verify-container-provenance.mjs",
