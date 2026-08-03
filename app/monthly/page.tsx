@@ -7,15 +7,20 @@ function formatDate(value: Date | null | undefined) {
   return value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' }).format(value) : 'Noch nicht vorhanden';
 }
 
+function formatDateTime(value: Date | null | undefined) {
+  return value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(value) : 'Noch nicht vorhanden';
+}
+
 function daysOld(value: Date) {
   return Math.max(0, Math.floor((Date.now() - value.getTime()) / 86_400_000));
 }
 
 export default async function MonthlyOperatorHome() {
-  const [snapshot, review, decision] = await Promise.all([
+  const [snapshot, review, decision, completion] = await Promise.all([
     prisma.importedPortfolioSnapshot.findFirst({ orderBy: [{ asOf: 'desc' }, { revision: 'desc' }] }).catch(() => null),
     prisma.etfMappingReviewRecord.findFirst({ orderBy: [{ reviewedAt: 'desc' }, { id: 'desc' }] }).catch(() => null),
-    prisma.decision.findFirst({ orderBy: { createdAt: 'desc' } }).catch(() => null)
+    prisma.decision.findFirst({ orderBy: { createdAt: 'desc' } }).catch(() => null),
+    prisma.monthlyRunCompletion.findFirst({ orderBy: [{ completedAt: 'desc' }, { id: 'desc' }] }).catch(() => null)
   ]);
 
   const snapshotAgeDays = snapshot ? daysOld(snapshot.asOf) : null;
@@ -32,13 +37,13 @@ export default async function MonthlyOperatorHome() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold text-slate-950">Monatslauf vorbereiten</h1>
-            <p className="mt-2 max-w-2xl text-slate-600">Ein Einstiegspunkt für Portfolio-Stand, ETF-Review und Hedge-Entscheidung.</p>
+            <p className="mt-2 max-w-2xl text-slate-600">Ein Einstiegspunkt für Portfolio-Stand, ETF-Review, Hedge-Entscheidung und den letzten fachlich abgeschlossenen Monatslauf.</p>
           </div>
           <Link href="/" className="text-sm font-medium text-slate-700 underline underline-offset-4">Zum bisherigen Dashboard</Link>
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Portfolio</p>
           <h2 className="mt-2 text-xl font-semibold text-slate-950">{snapshot ? formatDate(snapshot.asOf) : 'Noch kein Import'}</h2>
@@ -59,11 +64,24 @@ export default async function MonthlyOperatorHome() {
           <p className="mt-2 text-sm text-slate-600">{decision ? decision.recommendation : 'Der Monatslauf erzeugt erst nach validiertem Portfolio- und Marktkontext eine Empfehlung.'}</p>
           {decision && <p className="mt-4 text-xs text-slate-500">{formatDate(decision.observedAt ?? decision.createdAt)} · Regel {decision.ruleVersion}</p>}
         </article>
+
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">Letzter Monatsabschluss</p>
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">{completion ? formatDateTime(completion.completedAt) : 'Noch kein Abschluss'}</h2>
+          <p className="mt-2 text-sm text-slate-600">{completion ? completion.rationale : 'Der erste vollständige Monatslauf wurde noch nicht explizit abgeschlossen.'}</p>
+          {completion && (
+            <div className="mt-4 space-y-1 text-xs text-slate-500">
+              <p>{completion.actor} · Decision #{completion.decisionId}</p>
+              <p className="break-all">Snapshot: {completion.snapshotFingerprint}</p>
+              {completion.mappingReviewFingerprint && <p className="break-all">Review: {completion.mappingReviewFingerprint}</p>}
+            </div>
+          )}
+        </article>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
         <h2 className="text-lg font-semibold text-slate-950">Nächster Schritt</h2>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">Der geführte Browser-Workflow zeigt jetzt Readiness und Blocker für den vollständigen Monatslauf. Schreibende Schritte werden weiterhin nur explizit und Human-in-the-loop ergänzt.</p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">Der geführte Browser-Workflow deckt den vollständigen Human-in-the-loop-Monatslauf ab. CLI und JSON bleiben als reproduzierbare Recovery- und Power-User-Pfade erhalten.</p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href="/monthly/run" className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Geführten Monatslauf starten</Link>
           <Link href="/" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">Aktuelle Entscheidungen prüfen</Link>
