@@ -7,14 +7,30 @@ function formatDate(value: Date | null | undefined) {
   return value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' }).format(value) : 'Nicht vorhanden';
 }
 
+function mappingFingerprintFromSnapshot(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const fingerprints = (payload as { source_fingerprints?: unknown }).source_fingerprints;
+  if (!Array.isArray(fingerprints)) return undefined;
+  const source = fingerprints.find((value): value is string => typeof value === 'string' && value.startsWith('etf-mapping:sha256:'));
+  return source?.slice('etf-mapping:'.length);
+}
+
 export default async function GuidedMonthlyRunPage({ searchParams }: { searchParams: Promise<{ portfolio?: string; snapshot?: string; hedge?: string; decision?: string; mappingReview?: string; review?: string; completion?: string; completionId?: string }> }) {
   const params = await searchParams;
-  const [snapshot, review, decision, latestHistoricalCompletion] = await Promise.all([
+  const [snapshot, latestHistoricalReview, decision, latestHistoricalCompletion] = await Promise.all([
     prisma.importedPortfolioSnapshot.findFirst({ orderBy: [{ asOf: 'desc' }, { revision: 'desc' }] }).catch(() => null),
     prisma.etfMappingReviewRecord.findFirst({ orderBy: [{ reviewedAt: 'desc' }, { id: 'desc' }] }).catch(() => null),
     prisma.decision.findFirst({ orderBy: { createdAt: 'desc' } }).catch(() => null),
     prisma.monthlyRunCompletion.findFirst({ orderBy: [{ completedAt: 'desc' }, { id: 'desc' }] }).catch(() => null)
   ]);
+
+  const currentMappingFingerprint = snapshot ? mappingFingerprintFromSnapshot(snapshot.payloadJson) : undefined;
+  const currentReview = currentMappingFingerprint
+    ? await prisma.etfMappingReviewRecord.findFirst({
+        where: { currentMappingFingerprint },
+        orderBy: [{ reviewedAt: 'desc' }, { id: 'desc' }]
+      }).catch(() => null)
+    : null;
 
   const currentCompletion = snapshot && decision
     ? await prisma.monthlyRunCompletion.findFirst({
@@ -36,10 +52,16 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
     },
     {
       title: '2. Zielallokation & ETF-Mapping',
-      status: snapshot ? 'bereit' : 'wartet',
-      detail: review ? `Letzter Human Review: ${review.outcome.replaceAll('_', ' ')} am ${formatDate(review.reviewedAt)}` : 'Noch kein Human Review vorhanden. Ein Mapping-Wechsel bleibt bis zu einer expliziten Entscheidung gesperrt.',
+      status: !snapshot ? 'wartet' : currentReview ? 'bereit' : 'offen',
+      detail: currentReview
+        ? `Human Review für das aktuelle Mapping: ${currentReview.outcome.replaceAll('_', ' ')} am ${formatDate(currentReview.reviewedAt)}`
+        : currentMappingFingerprint
+          ? latestHistoricalReview
+            ? `Das aktuelle Mapping ist noch nicht geprüft. Der letzte Human Review vom ${formatDate(latestHistoricalReview.reviewedAt)} gehört zu einem anderen Mapping.`
+            : 'Das aktuelle Mapping ist noch nicht geprüft.'
+          : 'Der aktuelle Portfolio-Snapshot referenziert kein ETF-Mapping. Mapping anlegen oder Snapshot aktualisieren.',
       href: '/monthly/run/mapping-review',
-      action: review ? 'ETF-Mapping erneut prüfen' : 'ETF-Mapping prüfen'
+      action: currentReview ? 'ETF-Mapping erneut prüfen' : 'ETF-Mapping prüfen'
     },
     {
       title: '3. Hedge-Kontext',
@@ -70,6 +92,8 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
 
   const blockers = [
     !snapshot ? 'Portfolio-Snapshot fehlt.' : null,
+    snapshot && !currentMappingFingerprint ? 'Aktueller Portfolio-Snapshot referenziert kein ETF-Mapping.' : null,
+    currentMappingFingerprint && !currentReview ? 'Human Review für das aktuelle ETF-Mapping fehlt.' : null,
     !decision ? 'Aktueller Hedge-Kontext bzw. eine Entscheidung fehlt.' : null
   ].filter(Boolean) as string[];
 
