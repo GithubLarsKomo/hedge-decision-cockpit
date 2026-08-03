@@ -34,12 +34,21 @@ async function completeMonthlyRun(formData: FormData) {
   'use server';
   const actor = String(formData.get('actor') ?? '').trim();
   const rationale = String(formData.get('rationale') ?? '').trim();
+  const expectedSnapshotFingerprint = String(formData.get('expected_snapshot_fingerprint') ?? '').trim();
+  const expectedDecisionId = Number(String(formData.get('expected_decision_id') ?? '').trim());
   let result: Awaited<ReturnType<typeof persistMonthlyRunCompletion>>;
 
   try {
     const { snapshot, decision, review } = await loadReviewState();
     if (!snapshot) throw new Error('Portfolio-Snapshot fehlt.');
     if (!decision) throw new Error('Hedge-Entscheidung fehlt.');
+    if (!expectedSnapshotFingerprint || !Number.isInteger(expectedDecisionId)) {
+      throw new Error('Review-Identität fehlt. Bitte die Abschlussseite neu laden und erneut prüfen.');
+    }
+    if (snapshot.inputFingerprint !== expectedSnapshotFingerprint || decision.id !== expectedDecisionId) {
+      throw new Error('Der Monatslauf hat sich seit deiner Prüfung geändert. Bitte die aktuelle Entscheidung erneut prüfen und erst danach abschließen.');
+    }
+
     result = await persistMonthlyRunCompletion({
       snapshot_fingerprint: snapshot.inputFingerprint,
       decision_id: decision.id,
@@ -81,7 +90,7 @@ export default async function MonthlyDecisionReviewPage({ searchParams }: { sear
         <article className="rounded-2xl border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Hedge-Entscheidung</p>
           <p className="mt-2 text-lg font-semibold text-slate-950">{decision ? decision.action : 'Fehlt'}</p>
-          {decision && <p className="mt-2 text-sm text-slate-600">{decision.recommendation}</p>}
+          {decision && <p className="mt-2 text-sm text-slate-600">Decision-ID {decision.id} · {decision.recommendation}</p>}
         </article>
         <article className="rounded-2xl border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">ETF Human Review</p>
@@ -94,7 +103,10 @@ export default async function MonthlyDecisionReviewPage({ searchParams }: { sear
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">Portfolio-Snapshot und Hedge-Entscheidung müssen vor dem Abschluss vorhanden sein.</section>
       ) : (
         <form action={completeMonthlyRun} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5">
+          <input type="hidden" name="expected_snapshot_fingerprint" value={snapshot.inputFingerprint} />
+          <input type="hidden" name="expected_decision_id" value={String(decision.id)} />
           <h2 className="font-semibold text-slate-950">Explizite Abschlussbestätigung</h2>
+          <p className="text-sm text-slate-600">Der Abschluss ist an genau den oben angezeigten Snapshot und die Decision gebunden. Ändert sich einer davon vor dem Absenden, wird der Abschluss abgelehnt und muss erneut geprüft werden.</p>
           <label className="block text-sm font-medium text-slate-700">Prüfer<input name="actor" required className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
           <label className="block text-sm font-medium text-slate-700">Abschlussnotiz<textarea name="rationale" required rows={4} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Warum ist dieser Monatslauf fachlich geprüft und abgeschlossen?" /></label>
           <button className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Monatslauf verbindlich abschließen</button>
