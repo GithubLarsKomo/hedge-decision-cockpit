@@ -18,7 +18,6 @@ export function computeMonthlyRunCompletionFingerprint(value: MonthlyRunCompleti
   const parsed = completionSchema.parse(value);
   const canonical = JSON.stringify({
     actor: parsed.actor,
-    completed_at: parsed.completed_at,
     decision_id: parsed.decision_id,
     mapping_review_fingerprint: parsed.mapping_review_fingerprint ?? null,
     rationale: parsed.rationale,
