@@ -61,7 +61,7 @@ test('requires the historical minimums used by the existing n8n workflow', () =>
   );
 
   const tooFewVix = dailyHistory(MIN_NDX_HISTORY_OBSERVATIONS, undefined, index => ({
-    vixClose: index < MIN_VIX_HISTORY_OBSERVATIONS - 1 ? 20 : null
+    vixClose: index < MIN_VIX_HISTORY_OBSERVATIONS - 2 || index === 399 ? 20 : null
   }));
   assert.throws(() => deriveHedgeSignalsFromHistory(tooFewVix), /Insufficient VIX market history/);
 });
