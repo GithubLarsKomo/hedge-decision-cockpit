@@ -65,7 +65,7 @@ async function submitReview(formData: FormData) {
 export default async function MappingReviewPage({
   searchParams
 }: {
-  searchParams: Promise<{ current?: string; candidate?: string; error?: string }>;
+  searchParams: Promise<{ current?: string; candidate?: string; error?: string; artifact?: string }>;
 }) {
   const params = await searchParams;
   const artifacts = await listEtfMappingArtifacts();
@@ -78,6 +78,7 @@ export default async function MappingReviewPage({
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
           Noch kein kanonisches ETF-Mapping-Artefakt gespeichert. Ein Human Review kann erst auf einem exakten Mapping-Vertrag durchgeführt werden.
         </section>
+        <Link href="/monthly/run/mapping-review/new" className="inline-flex rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">ETF-Mapping im Browser erfassen</Link>
       </main>
     );
   }
@@ -101,10 +102,16 @@ export default async function MappingReviewPage({
       <header className="space-y-3">
         <Link href="/monthly/run" className="text-sm font-medium text-slate-600 underline underline-offset-4">← Zum Monatslauf</Link>
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Human-in-the-loop</p>
-        <h1 className="text-3xl font-semibold text-slate-950">ETF-Mapping prüfen</h1>
-        <p className="max-w-3xl text-slate-600">Die Entscheidung wird an den frisch berechneten deterministischen Review-Context gebunden. Kein Mapping wird durch diese Seite automatisch verändert.</p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-950">ETF-Mapping prüfen</h1>
+            <p className="mt-2 max-w-3xl text-slate-600">Die Entscheidung wird an den frisch berechneten deterministischen Review-Context gebunden. Kein Mapping wird durch diese Seite automatisch verändert.</p>
+          </div>
+          <Link href="/monthly/run/mapping-review/new" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800">Neues Mapping erfassen</Link>
+        </div>
       </header>
 
+      {params.artifact && <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900"><strong>Mapping-Artefakt {params.artifact === 'created' ? 'gespeichert' : 'idempotent bestätigt'}.</strong></section>}
       {params.error && <section className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">{params.error}</section>}
 
       <form method="get" className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-2">
