@@ -22,5 +22,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api/decision|_next/static|_next/image|favicon.ico).*)']
+  // Browser pages use optional Basic Auth. API routes own their authentication
+  // contracts (Bearer token for machine writes, public health/readiness probes).
+  matcher: ['/((?!api(?:/|$)|_next/static|_next/image|favicon.ico).*)']
 };
