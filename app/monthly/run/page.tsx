@@ -9,12 +9,22 @@ function formatDate(value: Date | null | undefined) {
 
 export default async function GuidedMonthlyRunPage({ searchParams }: { searchParams: Promise<{ portfolio?: string; snapshot?: string; hedge?: string; decision?: string; mappingReview?: string; review?: string; completion?: string; completionId?: string }> }) {
   const params = await searchParams;
-  const [snapshot, review, decision, completion] = await Promise.all([
+  const [snapshot, review, decision, latestHistoricalCompletion] = await Promise.all([
     prisma.importedPortfolioSnapshot.findFirst({ orderBy: [{ asOf: 'desc' }, { revision: 'desc' }] }).catch(() => null),
     prisma.etfMappingReviewRecord.findFirst({ orderBy: [{ reviewedAt: 'desc' }, { id: 'desc' }] }).catch(() => null),
     prisma.decision.findFirst({ orderBy: { createdAt: 'desc' } }).catch(() => null),
     prisma.monthlyRunCompletion.findFirst({ orderBy: [{ completedAt: 'desc' }, { id: 'desc' }] }).catch(() => null)
   ]);
+
+  const currentCompletion = snapshot && decision
+    ? await prisma.monthlyRunCompletion.findFirst({
+        where: {
+          snapshotFingerprint: snapshot.inputFingerprint,
+          decisionId: decision.id
+        },
+        orderBy: [{ completedAt: 'desc' }, { id: 'desc' }]
+      }).catch(() => null)
+    : null;
 
   const steps = [
     {
@@ -47,10 +57,14 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
     },
     {
       title: '5. Monatslauf abschließen',
-      status: completion ? 'abgeschlossen' : 'offen',
-      detail: completion ? `Abgeschlossen am ${formatDate(completion.completedAt)} durch ${completion.actor}.` : 'Abschluss bleibt eine explizite menschliche Aktion.',
+      status: currentCompletion ? 'abgeschlossen' : 'offen',
+      detail: currentCompletion
+        ? `Dieser aktuelle Lauf wurde am ${formatDate(currentCompletion.completedAt)} durch ${currentCompletion.actor} abgeschlossen.`
+        : latestHistoricalCompletion
+          ? `Der letzte Abschluss vom ${formatDate(latestHistoricalCompletion.completedAt)} gehört zu einem früheren Snapshot oder einer früheren Decision. Der aktuelle Lauf ist noch offen.`
+          : 'Abschluss bleibt eine explizite menschliche Aktion.',
       href: '/monthly/run/review',
-      action: completion ? 'Abschluss prüfen / erneut bestätigen' : 'Monatslauf abschließen'
+      action: currentCompletion ? 'Aktuellen Abschluss prüfen' : 'Monatslauf abschließen'
     }
   ];
 
