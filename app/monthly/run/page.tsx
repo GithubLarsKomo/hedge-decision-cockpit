@@ -7,7 +7,7 @@ function formatDate(value: Date | null | undefined) {
   return value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' }).format(value) : 'Nicht vorhanden';
 }
 
-export default async function GuidedMonthlyRunPage({ searchParams }: { searchParams: Promise<{ portfolio?: string; snapshot?: string; hedge?: string; decision?: string }> }) {
+export default async function GuidedMonthlyRunPage({ searchParams }: { searchParams: Promise<{ portfolio?: string; snapshot?: string; hedge?: string; decision?: string; mappingReview?: string; review?: string }> }) {
   const params = await searchParams;
   const [snapshot, review, decision] = await Promise.all([
     prisma.importedPortfolioSnapshot.findFirst({ orderBy: [{ asOf: 'desc' }, { revision: 'desc' }] }).catch(() => null),
@@ -26,7 +26,9 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
     {
       title: '2. Zielallokation & ETF-Mapping',
       status: snapshot ? 'bereit' : 'wartet',
-      detail: review ? `Letzter Human Review: ${review.outcome.replaceAll('_', ' ')} am ${formatDate(review.reviewedAt)}` : 'Noch kein Human Review vorhanden. Ein Mapping-Wechsel bleibt bis zu einer expliziten Entscheidung gesperrt.'
+      detail: review ? `Letzter Human Review: ${review.outcome.replaceAll('_', ' ')} am ${formatDate(review.reviewedAt)}` : 'Noch kein Human Review vorhanden. Ein Mapping-Wechsel bleibt bis zu einer expliziten Entscheidung gesperrt.',
+      href: '/monthly/run/mapping-review',
+      action: review ? 'ETF-Mapping erneut prüfen' : 'ETF-Mapping prüfen'
     },
     {
       title: '3. Hedge-Kontext',
@@ -65,6 +67,13 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
           <strong>Portfolio-Snapshot {params.portfolio === 'created' ? 'gespeichert' : 'unverändert bestätigt'}.</strong>
           {params.snapshot && <span> Snapshot-ID: {params.snapshot}</span>}
+        </section>
+      )}
+
+      {params.mappingReview && (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
+          <strong>ETF-Mapping Human Review {params.mappingReview === 'created' ? 'gespeichert' : 'idempotent bestätigt'}.</strong>
+          {params.review && <span className="break-all"> Record: {params.review}</span>}
         </section>
       )}
 
