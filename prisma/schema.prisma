@@ -65,6 +65,19 @@ model ImportedPortfolioSnapshot {
   @@index([strategyName, strategyVersion])
 }
 
+model EtfMappingArtifact {
+  id                 Int      @id @default(autoincrement())
+  createdAt          DateTime @default(now())
+  mappingVersion     String   @db.VarChar(80)
+  effectiveDate      DateTime @db.Date
+  mappingFingerprint String   @unique @db.VarChar(71)
+  schemaVersion      String   @db.VarChar(48)
+  payloadJson        Json
+
+  @@index([effectiveDate, createdAt])
+  @@index([mappingVersion])
+}
+
 model EtfMappingReviewRecord {
   id                          Int      @id @default(autoincrement())
   createdAt                   DateTime @default(now())
