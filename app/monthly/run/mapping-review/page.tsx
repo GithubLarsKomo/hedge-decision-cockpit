@@ -26,6 +26,7 @@ async function submitReview(formData: FormData) {
   const outcome = String(formData.get('outcome') ?? '');
   const reviewer = String(formData.get('reviewer') ?? '').trim();
   const rationale = String(formData.get('rationale') ?? '').trim();
+  let successTarget: string;
 
   try {
     const current = await getEtfMappingArtifactByFingerprint(currentFingerprint);
@@ -52,11 +53,13 @@ async function submitReview(formData: FormData) {
       rationale
     });
 
-    redirect(`/monthly/run?mappingReview=${result.persistence.created ? 'created' : 'replayed'}&review=${encodeURIComponent(result.record_fingerprint)}`);
+    successTarget = `/monthly/run?mappingReview=${result.persistence.created ? 'created' : 'replayed'}&review=${encodeURIComponent(result.record_fingerprint)}`;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'ETF mapping review failed.';
     redirect(`/monthly/run/mapping-review?error=${encodeURIComponent(message)}&current=${encodeURIComponent(currentFingerprint)}${candidateFingerprint ? `&candidate=${encodeURIComponent(candidateFingerprint)}` : ''}`);
   }
+
+  redirect(successTarget);
 }
 
 export default async function MappingReviewPage({
@@ -145,7 +148,7 @@ export default async function MappingReviewPage({
           <div className="mt-4 space-y-2">
             {context.comparison.exposures.map((entry) => (
               <div key={entry.exposure_id} className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">
-                <strong>{entry.exposure_id}</strong> · {entry.change_type}
+                <strong>{entry.exposure_id}</strong> · {entry.change}
               </div>
             ))}
           </div>
