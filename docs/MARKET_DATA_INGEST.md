@@ -1,15 +1,16 @@
 # Hedge market data ingest
 
-The hedge market-data path is independent of the portfolio workflow. Provider adapters fetch raw observations; the cockpit owns normalization, drawdown calculation, fingerprinting and persistence.
+The hedge market-data path is independent of the portfolio workflow. Provider adapters fetch raw observations; the cockpit owns rolling-reference-high policy, drawdown calculation, fingerprinting and persistence.
 
-## Canonical observation
+## Preferred raw daily observation
+
+For automated daily ingestion, callers provide only the observed market values:
 
 ```json
 {
   "observedAt": "2026-08-03T20:00:00.000Z",
-  "source": "provider-name",
+  "source": "nasdaq-fred-daily",
   "ndxClose": 28000.0,
-  "ndxReferenceHigh": 28500.0,
   "vixClose": 18.2,
   "vxnClose": null,
   "riskFreeRate": null,
@@ -17,9 +18,66 @@ The hedge market-data path is independent of the portfolio workflow. Provider ad
 }
 ```
 
-`ndxReferenceHigh` must be the reference high used by the configured hedge methodology and must be greater than or equal to `ndxClose`. The cockpit calculates `ndxDrawdownPercent`; callers do not supply it.
+Post this contract to:
+
+```text
+POST /api/market-observations/import
+Authorization: Bearer <N8N_INGEST_TOKEN>
+Content-Type: application/json
+```
+
+The caller must **not** provide `ndxReferenceHigh`. The cockpit derives it from NDX closes for the same `source` in the trailing two-calendar-year window, including earlier observations in the same batch. The first row in a fresh historical backfill therefore uses its own NDX close as the initial reference high.
+
+For batches:
+
+```json
+{
+  "observations": [
+    {
+      "observedAt": "2026-08-03T20:00:00.000Z",
+      "source": "nasdaq-fred-daily",
+      "ndxClose": 28000.0,
+      "vixClose": 18.2
+    },
+    {
+      "observedAt": "2026-08-04T20:00:00.000Z",
+      "source": "nasdaq-fred-daily",
+      "ndxClose": 28125.0,
+      "vixClose": 17.8
+    }
+  ]
+}
+```
+
+The response contains `requested`, `inserted` and `skipped` counts. Re-import is idempotent through the existing MarketSnapshot identities.
+
+## Enriched canonical snapshot ingest
+
+The previous enriched endpoint remains supported for compatibility:
+
+```text
+POST /api/market-snapshots/import
+Authorization: Bearer <N8N_INGEST_TOKEN>
+Content-Type: application/json
+```
+
+Its observation contract includes an explicit `ndxReferenceHigh`:
+
+```json
+{
+  "observedAt": "2026-08-03T20:00:00.000Z",
+  "source": "provider-name",
+  "ndxClose": 28000.0,
+  "ndxReferenceHigh": 28500.0,
+  "vixClose": 18.2
+}
+```
+
+Use the raw endpoint for new automation. The enriched endpoint is useful for controlled migrations or externally pre-derived historical datasets.
 
 ## Historical CSV backfill
+
+The existing CSV CLI imports enriched snapshots.
 
 Required columns:
 
@@ -49,35 +107,19 @@ npx tsx scripts/import-market-snapshots.ts history.csv nasdaq-fred
 
 For semicolon or tab separated data add `semicolon` or `tab` as the third argument.
 
-The import is idempotent: existing source/timestamp or content identities are skipped by the database store.
+For a raw historical backfill without precomputing reference highs, send chronological or unordered observations as a batch to `/api/market-observations/import`; the cockpit sorts each source chronologically and derives the rolling highs before persistence.
 
-## Automated n8n ingest
+## Derived hedge signals
 
-Endpoint:
+The canonical signal derivation preserves the original n8n methodology explicitly:
 
-```text
-POST /api/market-snapshots/import
-Authorization: Bearer <N8N_INGEST_TOKEN>
-Content-Type: application/json
-```
+- trailing two-calendar-year window;
+- NDX reference high = maximum NDX close in that window;
+- drawdown = current NDX close divided by reference high minus one;
+- VIX percentile = percentage of non-null VIX closes in the same window that are less than or equal to the current VIX;
+- at least 400 NDX and 200 VIX observations are required before producing a rule-engine input.
 
-One observation can be posted directly. For batches use:
-
-```json
-{
-  "observations": [
-    {
-      "observedAt": "2026-08-03T20:00:00.000Z",
-      "source": "daily-provider-adapter",
-      "ndxClose": 28000.0,
-      "ndxReferenceHigh": 28500.0,
-      "vixClose": 18.2
-    }
-  ]
-}
-```
-
-The response contains `requested`, `inserted` and `skipped` counts.
+Early backfill rows may be persisted with less history; the minimums apply only when deriving a hedge decision signal.
 
 ## Provider boundary
 
@@ -86,4 +128,4 @@ Provider-specific fetching stays outside the rule engine. Initial recommended pr
 - VIX: FRED `VIXCLS`, daily close, sourced from CBOE.
 - NDX: Nasdaq historical NDX data or a replaceable adapter with explicit provider identity.
 
-A subsequent slice derives rolling/reference-high policy and VIX percentile from stored history, then passes only those deterministic inputs into the existing hedge rule engine.
+The provider adapter should combine the daily NDX and VIX observations into one raw payload and post it to `/api/market-observations/import`. The existing hedge rule engine remains the only component that converts derived signals into a recommendation.
