@@ -7,7 +7,7 @@ function formatDate(value: Date | null | undefined) {
   return value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' }).format(value) : 'Nicht vorhanden';
 }
 
-export default async function GuidedMonthlyRunPage({ searchParams }: { searchParams: Promise<{ portfolio?: string; snapshot?: string }> }) {
+export default async function GuidedMonthlyRunPage({ searchParams }: { searchParams: Promise<{ portfolio?: string; snapshot?: string; hedge?: string; decision?: string }> }) {
   const params = await searchParams;
   const [snapshot, review, decision] = await Promise.all([
     prisma.importedPortfolioSnapshot.findFirst({ orderBy: [{ asOf: 'desc' }, { revision: 'desc' }] }).catch(() => null),
@@ -31,7 +31,9 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
     {
       title: '3. Hedge-Kontext',
       status: decision ? 'vorhanden' : 'offen',
-      detail: decision ? `Letzte Signale: NDX Drawdown ${decision.ndxDrawdownPct.toFixed(2)} %, VIX-Perzentil ${decision.vixPercentile.toFixed(1)}.` : 'Taktische Marktsignale müssen noch erfasst werden.'
+      detail: decision ? `Letzte Signale: NDX Drawdown ${decision.ndxDrawdownPct.toFixed(2)} %, VIX-Perzentil ${decision.vixPercentile.toFixed(1)}.` : 'Taktische Marktsignale müssen noch erfasst werden.',
+      href: '/monthly/run/hedge',
+      action: decision ? 'Hedge-Kontext aktualisieren' : 'Hedge-Kontext erfassen'
     },
     {
       title: '4. Entscheidung prüfen',
@@ -41,7 +43,7 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
     {
       title: '5. Monatslauf abschließen',
       status: 'manuell',
-      detail: 'Abschluss bleibt eine explizite menschliche Aktion. Dieser Slice führt noch keine Schreiboperation aus.'
+      detail: 'Abschluss bleibt eine explizite menschliche Aktion. Dieser Slice führt noch keine Ausführung aus.'
     }
   ];
 
@@ -63,6 +65,13 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
           <strong>Portfolio-Snapshot {params.portfolio === 'created' ? 'gespeichert' : 'unverändert bestätigt'}.</strong>
           {params.snapshot && <span> Snapshot-ID: {params.snapshot}</span>}
+        </section>
+      )}
+
+      {params.hedge && (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
+          <strong>Hedge-Kontext geprüft und Empfehlung gespeichert.</strong>
+          {params.decision && <span> Decision-ID: {params.decision}</span>}
         </section>
       )}
 
