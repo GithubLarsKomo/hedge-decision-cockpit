@@ -1,0 +1,68 @@
+{
+  "name": "Hedge Cockpit - FRED Daily Market Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "30 16 * * 1-5" }] }
+      },
+      "id": "schedule",
+      "name": "Weekday Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.HEDGE_COCKPIT_URL}}/api/market-data/fred/sync",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.N8N_INGEST_TOKEN}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {}
+      },
+      "id": "fred-sync",
+      "name": "Sync FRED Market Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.HEDGE_COCKPIT_URL}}/api/hedge-decisions/from-history",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.N8N_INGEST_TOKEN}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: $json.source }) }}",
+        "options": {}
+      },
+      "id": "hedge-decision",
+      "name": "Run Hedge Decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [620, 0]
+    }
+  ],
+  "connections": {
+    "Weekday Schedule": {
+      "main": [[{ "node": "Sync FRED Market Data", "type": "main", "index": 0 }]]
+    },
+    "Sync FRED Market Data": {
+      "main": [[{ "node": "Run Hedge Decision", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "timezone": "Europe/Berlin" }
+}
