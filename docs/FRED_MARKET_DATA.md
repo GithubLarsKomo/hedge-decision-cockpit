@@ -94,7 +94,7 @@ N8N_INGEST_TOKEN=<same token as the cockpit>
 
 If n8n runs outside Docker, set `HEDGE_COCKPIT_URL` to the address from which n8n can reach the cockpit.
 
-The example workflow runs on weekdays at 16:30 in `Europe/Berlin`. It first calls the FRED sync endpoint and then asks the cockpit to run the latest stored hedge decision. The synchronization is overlapping and idempotent, so a provider delay results in a replay of the previous common observation rather than a duplicated decision.
+The example workflow runs on weekdays at **22:30 Europe/Berlin**, after the regular US market close. It first calls the FRED sync endpoint and then asks the cockpit to run the latest stored hedge decision. The synchronization is overlapping and idempotent, so a provider publication delay results in a replay of the previous common observation rather than a duplicated decision. If FRED has not published the current trading day's values by 22:30, the next scheduled run will pick them up automatically through the ten-day overlap.
 
 ## Provider attribution and data terms
 
