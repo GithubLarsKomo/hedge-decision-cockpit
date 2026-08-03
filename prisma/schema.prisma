@@ -98,6 +98,22 @@ model EtfMappingReviewRecord {
   @@index([outcome])
 }
 
+model MonthlyRunCompletion {
+  id                       Int      @id @default(autoincrement())
+  createdAt                DateTime @default(now())
+  completedAt              DateTime
+  completionFingerprint    String   @unique @db.VarChar(71)
+  snapshotFingerprint      String   @db.VarChar(71)
+  decisionId               Int
+  mappingReviewFingerprint String?  @db.VarChar(71)
+  actor                     String   @db.VarChar(160)
+  rationale                 String   @db.Text
+
+  @@index([completedAt])
+  @@index([snapshotFingerprint])
+  @@index([decisionId])
+}
+
 model HedgePositionSnapshot {
   id                    Int      @id @default(autoincrement())
   decisionId            Int      @unique
