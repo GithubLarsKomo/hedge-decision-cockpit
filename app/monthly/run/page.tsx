@@ -7,12 +7,13 @@ function formatDate(value: Date | null | undefined) {
   return value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' }).format(value) : 'Nicht vorhanden';
 }
 
-export default async function GuidedMonthlyRunPage({ searchParams }: { searchParams: Promise<{ portfolio?: string; snapshot?: string; hedge?: string; decision?: string; mappingReview?: string; review?: string }> }) {
+export default async function GuidedMonthlyRunPage({ searchParams }: { searchParams: Promise<{ portfolio?: string; snapshot?: string; hedge?: string; decision?: string; mappingReview?: string; review?: string; completion?: string; completionId?: string }> }) {
   const params = await searchParams;
-  const [snapshot, review, decision] = await Promise.all([
+  const [snapshot, review, decision, completion] = await Promise.all([
     prisma.importedPortfolioSnapshot.findFirst({ orderBy: [{ asOf: 'desc' }, { revision: 'desc' }] }).catch(() => null),
     prisma.etfMappingReviewRecord.findFirst({ orderBy: [{ reviewedAt: 'desc' }, { id: 'desc' }] }).catch(() => null),
-    prisma.decision.findFirst({ orderBy: { createdAt: 'desc' } }).catch(() => null)
+    prisma.decision.findFirst({ orderBy: { createdAt: 'desc' } }).catch(() => null),
+    prisma.monthlyRunCompletion.findFirst({ orderBy: [{ completedAt: 'desc' }, { id: 'desc' }] }).catch(() => null)
   ]);
 
   const steps = [
@@ -40,12 +41,16 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
     {
       title: '4. Entscheidung prüfen',
       status: decision ? 'bereit' : 'wartet',
-      detail: decision ? `${decision.action} · Regel ${decision.ruleVersion}` : 'Noch keine Hedge-Empfehlung vorhanden.'
+      detail: decision ? `${decision.action} · Regel ${decision.ruleVersion}` : 'Noch keine Hedge-Empfehlung vorhanden.',
+      href: '/monthly/run/review',
+      action: decision ? 'Entscheidung prüfen' : 'Entscheidung noch nicht verfügbar'
     },
     {
       title: '5. Monatslauf abschließen',
-      status: 'manuell',
-      detail: 'Abschluss bleibt eine explizite menschliche Aktion. Dieser Slice führt noch keine Ausführung aus.'
+      status: completion ? 'abgeschlossen' : 'offen',
+      detail: completion ? `Abgeschlossen am ${formatDate(completion.completedAt)} durch ${completion.actor}.` : 'Abschluss bleibt eine explizite menschliche Aktion.',
+      href: '/monthly/run/review',
+      action: completion ? 'Abschluss prüfen / erneut bestätigen' : 'Monatslauf abschließen'
     }
   ];
 
@@ -81,6 +86,13 @@ export default async function GuidedMonthlyRunPage({ searchParams }: { searchPar
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
           <strong>Hedge-Kontext geprüft und Empfehlung gespeichert.</strong>
           {params.decision && <span> Decision-ID: {params.decision}</span>}
+        </section>
+      )}
+
+      {params.completion && (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
+          <strong>Monatslauf {params.completion === 'created' ? 'fachlich abgeschlossen' : 'idempotent bestätigt'}.</strong>
+          {params.completionId && <span> Completion-ID: {params.completionId}</span>}
         </section>
       )}
 
