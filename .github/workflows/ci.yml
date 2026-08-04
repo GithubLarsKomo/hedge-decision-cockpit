@@ -73,7 +73,7 @@ jobs:
       - name: Build production container
         run: docker build --tag hedge-decision-cockpit:ci .
       - name: Scan production container
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: hedge-decision-cockpit:ci
           format: table
@@ -82,7 +82,7 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
       - name: Generate CycloneDX SBOM
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: hedge-decision-cockpit:ci
           format: cyclonedx
@@ -91,7 +91,7 @@ jobs:
       - name: Verify CycloneDX SBOM
         run: npm run verify:sbom
       - name: Generate SPDX SBOM
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: hedge-decision-cockpit:ci
           format: spdx-json
