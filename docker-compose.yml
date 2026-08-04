@@ -1,41 +1,18 @@
 services:
-  db:
-    image: mariadb:11.8
-    container_name: hedge-decision-db
-    restart: unless-stopped
-    environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
-      MARIADB_DATABASE: ${MARIADB_DATABASE:-hedge_decision}
-      MARIADB_USER: ${MARIADB_USER:-hedge_user}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
-    volumes:
-      - hedge-decision-db-data:/var/lib/mysql
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - mariadb-admin ping -h 127.0.0.1 -u root -p"${MARIADB_ROOT_PASSWORD}" --silent
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    networks:
-      - hedge-decision
-
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: hedge-decision-app
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DATABASE_URL: mysql://${MARIADB_USER:-hedge_user}:${MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-hedge_decision}
+      DATABASE_URL: file:/app/data/hedge.db
       N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN}
       FRED_API_KEY: ${FRED_API_KEY}
       DASHBOARD_BASIC_AUTH_USER: ${DASHBOARD_USER:-admin}
       DASHBOARD_BASIC_AUTH_PASSWORD: ${DASHBOARD_PASSWORD}
+    volumes:
+      - ./data:/app/data
     ports:
       - "${APP_PORT:-3000}:3000"
     healthcheck:
@@ -48,12 +25,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
-    networks:
-      - hedge-decision
+
+  legacy-db:
+    profiles: ["migration"]
+    image: mariadb:11.8
+    container_name: hedge-decision-legacy-db
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-hedge_decision}
+      MARIADB_USER: ${MARIADB_USER:-hedge_user}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      - hedge-decision-db-data:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mariadb-admin ping -h 127.0.0.1 -u root -p"${MARIADB_ROOT_PASSWORD}" --silent
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
 
 volumes:
+  # Legacy volume retained only for the one-time MariaDB -> SQLite migration profile.
+  # Normal `docker compose up` does not start MariaDB.
   hedge-decision-db-data:
-
-networks:
-  hedge-decision:
-    driver: bridge

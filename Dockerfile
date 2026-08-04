@@ -10,7 +10,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate && npm run build
+RUN npx prisma generate \
+    && mkdir -p /app/bootstrap \
+    && DATABASE_URL=file:/app/bootstrap/hedge.db npx prisma db push --skip-generate \
+    && npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -20,14 +23,16 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 RUN apk add --no-cache curl openssl \
     && rm -rf /usr/local/lib/node_modules/npm \
-    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx \
+    && mkdir -p /app/data \
+    && chown node:node /app/data
 COPY --chown=node:node --from=builder /app/public ./public
 COPY --chown=node:node --from=builder /app/.next/standalone ./
 COPY --chown=node:node --from=builder /app/.next/static ./.next/static
-COPY --chown=node:node --from=builder /app/prisma ./prisma
+COPY --chown=node:node --from=builder /app/bootstrap ./bootstrap
 COPY --chown=node:node --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --chown=node:node --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --chown=node:node --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --chown=node:node --from=builder /app/scripts/bootstrap-sqlite.mjs ./bootstrap-sqlite.mjs
 COPY --chown=node:node --from=builder /app/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN sed -i 's/\r$//' ./docker-entrypoint.sh \
     && chmod +x ./docker-entrypoint.sh

@@ -30,27 +30,47 @@ test('maps normalized snapshots to persistence values', () => {
   assert.equal(data.ndxDrawdownPercent, first.ndxDrawdownPercent);
 });
 
-test('persists a batch idempotently and reports skipped rows', async () => {
-  let received: unknown;
+test('persists only rows that are not already present', async () => {
+  const createCalls: unknown[] = [];
+  let findCall = 0;
   const store = {
     marketSnapshot: {
+      async findMany() {
+        findCall += 1;
+        if (findCall <= 2) {
+          return [{
+            contentHash: first.contentHash,
+            source: first.source,
+            observedAt: new Date(first.observedAt)
+          }];
+        }
+        return [];
+      },
       async createMany(args: unknown) {
-        received = args;
-        return { count: 1 };
+        createCalls.push(args);
+        return { count: (args as { data: unknown[] }).data.length };
       }
     }
   };
 
   const result = await persistMarketSnapshots(store, [first, second]);
   assert.deepEqual(result, { requested: 2, inserted: 1, skipped: 1 });
-  assert.equal((received as { skipDuplicates: boolean }).skipDuplicates, true);
-  assert.equal((received as { data: unknown[] }).data.length, 2);
+  assert.equal(createCalls.length, 1);
+  assert.equal((createCalls[0] as { data: unknown[] }).data.length, 1);
+  assert.equal(
+    ((createCalls[0] as { data: Array<{ contentHash: string }> }).data[0]).contentHash,
+    second.contentHash
+  );
 });
 
 test('does not call the database for an empty batch', async () => {
   let called = false;
   const store = {
     marketSnapshot: {
+      async findMany() {
+        called = true;
+        return [];
+      },
       async createMany() {
         called = true;
         return { count: 0 };
@@ -65,6 +85,9 @@ test('does not call the database for an empty batch', async () => {
 test('rejects duplicate hashes before database access', async () => {
   const store = {
     marketSnapshot: {
+      async findMany() {
+        throw new Error('must not be called');
+      },
       async createMany() {
         throw new Error('must not be called');
       }

@@ -5,7 +5,11 @@ import {
   type MarketSnapshotInput,
   type NormalizedMarketSnapshot
 } from './market-snapshot';
-import { persistMarketSnapshots, type PersistMarketSnapshotsResult } from './market-snapshot-store';
+import {
+  persistMarketSnapshots,
+  type MarketSnapshotStore,
+  type PersistMarketSnapshotsResult
+} from './market-snapshot-store';
 
 export type RawMarketObservationInput = Omit<MarketSnapshotInput, 'ndxReferenceHigh'>;
 export type RawMarketObservationIngestBody = RawMarketObservationInput | { observations: RawMarketObservationInput[] };
@@ -15,35 +19,7 @@ type StoredNdxObservation = {
   ndxClose: number;
 };
 
-type MarketSnapshotCreateData = {
-  observedAt: Date;
-  source: string;
-  contentHash: string;
-  ndxClose: number;
-  ndxReferenceHigh: number;
-  ndxDrawdownPercent: number;
-  vixClose: number | null;
-  vxnClose: number | null;
-  riskFreeRate: number | null;
-  dividendYield: number | null;
-};
-
-export type RawMarketObservationStore = {
-  marketSnapshot: {
-    findMany(args: {
-      where: {
-        source: string;
-        observedAt: { gte: Date; lte: Date };
-      };
-      orderBy: { observedAt: 'asc' };
-      select: { observedAt: true; ndxClose: true };
-    }): Promise<StoredNdxObservation[]>;
-    createMany(args: {
-      data: MarketSnapshotCreateData[];
-      skipDuplicates: boolean;
-    }): Promise<{ count: number }>;
-  };
-};
+export type RawMarketObservationStore = MarketSnapshotStore;
 
 function parseRawObservation(value: unknown): RawMarketObservationInput {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -77,6 +53,18 @@ function parseRawObservation(value: unknown): RawMarketObservationInput {
     riskFreeRate: provisional.riskFreeRate,
     dividendYield: provisional.dividendYield
   };
+}
+
+function asStoredNdxObservations(rows: unknown[]): StoredNdxObservation[] {
+  return rows.map(row => {
+    if (!row || typeof row !== 'object') throw new Error('Database returned an invalid NDX observation.');
+    const value = row as Record<string, unknown>;
+    const observedAt = value.observedAt instanceof Date ? value.observedAt : new Date(String(value.observedAt));
+    if (Number.isNaN(observedAt.getTime()) || typeof value.ndxClose !== 'number') {
+      throw new Error('Database returned an incomplete NDX observation.');
+    }
+    return { observedAt, ndxClose: value.ndxClose };
+  });
 }
 
 export function parseRawMarketObservationIngestBody(body: unknown): RawMarketObservationInput[] {
@@ -117,7 +105,7 @@ export async function enrichRawMarketObservations(
     const ordered = [...sourceInputs].sort((a, b) => a.observedAt.localeCompare(b.observedAt));
     const earliest = new Date(ordered[0].observedAt);
     const latest = new Date(ordered[ordered.length - 1].observedAt);
-    const stored = await store.marketSnapshot.findMany({
+    const storedRaw = await store.marketSnapshot.findMany({
       where: {
         source,
         observedAt: {
@@ -128,6 +116,7 @@ export async function enrichRawMarketObservations(
       orderBy: { observedAt: 'asc' },
       select: { observedAt: true, ndxClose: true }
     });
+    const stored = asStoredNdxObservations(storedRaw);
 
     const known: StoredNdxObservation[] = stored.map(row => ({
       observedAt: new Date(row.observedAt),

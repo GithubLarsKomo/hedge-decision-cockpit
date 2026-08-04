@@ -14,21 +14,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: hedge
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
     env:
-      DATABASE_URL: mysql://root:root@127.0.0.1:3306/hedge
+      DATABASE_URL: file:${{ github.workspace }}/ci.db
       N8N_INGEST_TOKEN: test-token-for-ci
     steps:
       - uses: actions/checkout@v4
@@ -196,7 +183,7 @@ jobs:
             --cap-drop ALL \
             --pids-limit 256 \
             --security-opt no-new-privileges:true \
-            --env DATABASE_URL="$DATABASE_URL" \
+            --env DATABASE_URL=file:/tmp/hedge-ci.db \
             --env PORT=3100 \
             hedge-decision-cockpit:ci >container.id
           trap 'docker logs hedge-decision-cockpit-ci >container.log 2>&1 || true; docker rm --force hedge-decision-cockpit-ci >/dev/null 2>&1 || true' EXIT

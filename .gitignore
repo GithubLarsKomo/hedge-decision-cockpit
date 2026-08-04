@@ -7,3 +7,9 @@ node_modules
 
 # Local Docker secrets
 .env.docker
+
+# Local SQLite persistence and sidecar files
+data/
+*.db
+*.db-shm
+*.db-wal
