@@ -82,17 +82,23 @@ test('sync fetches both FRED series, joins common dates and persists canonically
     };
   };
 
-  const created: Array<{ ndxClose: number; ndxReferenceHigh: number; vixClose: number | null }> = [];
+  type CreatedRow = {
+    ndxClose: number;
+    ndxReferenceHigh: number;
+    vixClose: number | null;
+  };
+  const created: CreatedRow[] = [];
   const store: RawMarketObservationStore = {
     marketSnapshot: {
       async findMany() { return []; },
       async createMany(args) {
-        created.push(...args.data.map(row => ({
+        const rows = args.data as CreatedRow[];
+        created.push(...rows.map(row => ({
           ndxClose: row.ndxClose,
           ndxReferenceHigh: row.ndxReferenceHigh,
           vixClose: row.vixClose
         })));
-        return { count: args.data.length };
+        return { count: rows.length };
       }
     }
   };
