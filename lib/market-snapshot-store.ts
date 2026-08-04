@@ -19,9 +19,14 @@ type ExistingMarketSnapshot = {
   observedAt: Date;
 };
 
+// Prisma's generated delegate signatures differ slightly by connector (for example,
+// SQLite intentionally omits skipDuplicates). Keep this narrow boundary structural
+// and validate/cast projections immediately inside the persistence functions.
 export type MarketSnapshotDelegate = {
-  findMany(args: unknown): Promise<ExistingMarketSnapshot[]>;
-  createMany(args: { data: MarketSnapshotCreateData[] }): Promise<{ count: number }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  findMany(args: any): Promise<any[]>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createMany(args: any): Promise<{ count: number }>;
 };
 
 export type MarketSnapshotStore = {
@@ -61,6 +66,19 @@ function sourceTimeKey(source: string, observedAt: string | Date): string {
   return `${source}\u0000${iso}`;
 }
 
+function asExistingMarketSnapshots(rows: unknown[]): ExistingMarketSnapshot[] {
+  return rows.map(row => {
+    if (!row || typeof row !== 'object') throw new Error('Database returned an invalid MarketSnapshot projection.');
+    const value = row as Record<string, unknown>;
+    if (typeof value.contentHash !== 'string' || typeof value.source !== 'string') {
+      throw new Error('Database returned an incomplete MarketSnapshot projection.');
+    }
+    const observedAt = value.observedAt instanceof Date ? value.observedAt : new Date(String(value.observedAt));
+    if (Number.isNaN(observedAt.getTime())) throw new Error('Database returned an invalid MarketSnapshot observedAt value.');
+    return { contentHash: value.contentHash, source: value.source, observedAt };
+  });
+}
+
 export async function persistMarketSnapshots(
   store: MarketSnapshotStore,
   snapshots: NormalizedMarketSnapshot[]
@@ -88,7 +106,7 @@ export async function persistMarketSnapshots(
     const chunk = snapshots.slice(offset, offset + PERSISTENCE_CHUNK_SIZE);
     const createData = chunk.map(toMarketSnapshotCreateData);
 
-    const [existingByHash, existingBySourceTime] = await Promise.all([
+    const [existingByHashRaw, existingBySourceTimeRaw] = await Promise.all([
       store.marketSnapshot.findMany({
         where: { contentHash: { in: chunk.map(snapshot => snapshot.contentHash) } },
         select: { contentHash: true, source: true, observedAt: true }
@@ -101,6 +119,8 @@ export async function persistMarketSnapshots(
       })
     ]);
 
+    const existingByHash = asExistingMarketSnapshots(existingByHashRaw);
+    const existingBySourceTime = asExistingMarketSnapshots(existingBySourceTimeRaw);
     const existingHashes = new Set(existingByHash.map(row => row.contentHash));
     const existingSourceTimes = new Set(
       existingBySourceTime.map(row => sourceTimeKey(row.source, row.observedAt))
