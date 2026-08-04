@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -11,23 +11,23 @@ model Decision {
   id                     Int      @id @default(autoincrement())
   createdAt              DateTime @default(now())
   observedAt             DateTime?
-  source                  String?  @db.VarChar(120)
-  inputFingerprint        String?  @unique @db.VarChar(64)
-  ruleVersion             String   @default("1.0.0") @db.VarChar(30)
+  source                  String?
+  inputFingerprint        String?  @unique
+  ruleVersion             String   @default("1.0.0")
   triggeredRulesJson      Json?
   ndxNow                  Float
   ndxHigh2y               Float
   ndxDrawdownPct          Float
   vixNow                  Float
   vixPercentile           Float
-  action                  String   @db.VarChar(80)
-  severity                String   @db.VarChar(20)
-  recommendation          String   @db.Text
-  portfolioMarketValueEur Decimal? @db.Decimal(18, 2)
-  hedgeMarketValueEur     Decimal? @db.Decimal(18, 2)
-  hedgeUnrealizedGainEur  Decimal? @db.Decimal(18, 2)
-  hedgeCoveragePercent    Decimal? @db.Decimal(7, 2)
-  notes                   String?  @db.Text
+  action                  String
+  severity                String
+  recommendation          String
+  portfolioMarketValueEur Decimal?
+  hedgeMarketValueEur     Decimal?
+  hedgeUnrealizedGainEur  Decimal?
+  hedgeCoveragePercent    Decimal?
+  notes                   String?
   portfolioSnapshot       PortfolioSnapshot?
   hedgePositionSnapshot   HedgePositionSnapshot?
   executionAuditRecord    ExecutionAuditRecord?
@@ -42,22 +42,22 @@ model PortfolioSnapshot {
   id                  Int      @id @default(autoincrement())
   decisionId          Int      @unique
   createdAt           DateTime @default(now())
-  marketValueEur      Decimal  @db.Decimal(18, 2)
-  targetHedgePercent  Decimal? @db.Decimal(7, 2)
+  marketValueEur      Decimal
+  targetHedgePercent  Decimal?
   decision            Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
 }
 
 model ImportedPortfolioSnapshot {
   id               Int      @id @default(autoincrement())
   createdAt        DateTime @default(now())
-  snapshotId       String   @db.VarChar(80)
+  snapshotId       String
   revision         Int
-  asOf             DateTime @db.Date
+  asOf             DateTime
   generatedAt      DateTime
-  schemaVersion    String   @db.VarChar(40)
-  strategyName     String   @db.VarChar(120)
-  strategyVersion  String   @db.VarChar(80)
-  inputFingerprint String   @unique @db.VarChar(71)
+  schemaVersion    String
+  strategyName     String
+  strategyVersion  String
+  inputFingerprint String   @unique
   payloadJson      Json
 
   @@unique([snapshotId, revision])
@@ -68,10 +68,10 @@ model ImportedPortfolioSnapshot {
 model EtfMappingArtifact {
   id                 Int      @id @default(autoincrement())
   createdAt          DateTime @default(now())
-  mappingVersion     String   @db.VarChar(80)
-  effectiveDate      DateTime @db.Date
-  mappingFingerprint String   @unique @db.VarChar(71)
-  schemaVersion      String   @db.VarChar(48)
+  mappingVersion     String
+  effectiveDate      DateTime
+  mappingFingerprint String   @unique
+  schemaVersion      String
   payloadJson        Json
 
   @@index([effectiveDate, createdAt])
@@ -81,16 +81,16 @@ model EtfMappingArtifact {
 model EtfMappingReviewRecord {
   id                          Int      @id @default(autoincrement())
   createdAt                   DateTime @default(now())
-  recordFingerprint           String   @unique @db.VarChar(71)
-  schemaVersion               String   @db.VarChar(40)
-  currentMappingVersion       String   @db.VarChar(80)
-  currentMappingFingerprint   String   @db.VarChar(71)
-  candidateMappingVersion     String?  @db.VarChar(80)
-  candidateMappingFingerprint String?  @db.VarChar(71)
-  outcome                     String   @db.VarChar(32)
-  reviewer                    String   @db.VarChar(160)
+  recordFingerprint           String   @unique
+  schemaVersion               String
+  currentMappingVersion       String
+  currentMappingFingerprint   String
+  candidateMappingVersion     String?
+  candidateMappingFingerprint String?
+  outcome                     String
+  reviewer                    String
   reviewedAt                  DateTime
-  rationale                   String   @db.Text
+  rationale                   String
   payloadJson                 Json
 
   @@index([reviewedAt])
@@ -102,12 +102,12 @@ model MonthlyRunCompletion {
   id                       Int      @id @default(autoincrement())
   createdAt                DateTime @default(now())
   completedAt              DateTime
-  completionFingerprint    String   @unique @db.VarChar(71)
-  snapshotFingerprint      String   @db.VarChar(71)
+  completionFingerprint    String   @unique
+  snapshotFingerprint      String
   decisionId               Int
-  mappingReviewFingerprint String?  @db.VarChar(71)
-  actor                     String   @db.VarChar(160)
-  rationale                 String   @db.Text
+  mappingReviewFingerprint String?
+  actor                     String
+  rationale                 String
 
   @@index([completedAt])
   @@index([snapshotFingerprint])
@@ -118,37 +118,37 @@ model HedgePositionSnapshot {
   id                    Int      @id @default(autoincrement())
   decisionId            Int      @unique
   createdAt             DateTime @default(now())
-  underlying            String   @db.VarChar(40)
-  instrumentDescription String?  @db.VarChar(255)
-  quantity              Decimal? @db.Decimal(18, 4)
-  strike                 Decimal? @db.Decimal(18, 4)
+  underlying            String
+  instrumentDescription String?
+  quantity              Decimal?
+  strike                 Decimal?
   expiry                 DateTime?
-  marketValueEur         Decimal? @db.Decimal(18, 2)
-  unrealizedGainEur      Decimal? @db.Decimal(18, 2)
+  marketValueEur         Decimal?
+  unrealizedGainEur      Decimal?
   decision               Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
 }
 
 model ExecutionAuditRecord {
   id                       Int      @id @default(autoincrement())
   decisionId               Int      @unique
-  recommendationId         String   @unique @db.VarChar(120)
-  recommendedStrategy      String   @db.VarChar(80)
+  recommendationId         String   @unique
+  recommendedStrategy      String
   recommendedContracts     Int
   decidedAt                DateTime
-  approvalDecision         String   @db.VarChar(20)
-  approvalActorId          String   @db.VarChar(120)
+  approvalDecision         String
+  approvalActorId          String
   approvalRecordedAt       DateTime
-  approvalReason           String?  @db.Text
-  executionStatus          String   @db.VarChar(30)
-  executionActorId         String?  @db.VarChar(120)
+  approvalReason           String?
+  executionStatus          String
+  executionActorId         String?
   executionRecordedAt      DateTime?
-  executedStrategy         String?  @db.VarChar(80)
+  executedStrategy         String?
   executedContracts        Int?
-  averagePrice             Decimal? @db.Decimal(18, 4)
+  averagePrice             Decimal?
   strategyChanged          Boolean
   contractQuantityChanged  Boolean
   notFullyExecuted         Boolean
-  deviationReason          String?  @db.Text
+  deviationReason          String?
   createdAt                DateTime @default(now())
   decision                 Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
 
@@ -161,8 +161,8 @@ model MarketSnapshot {
   id                   Int      @id @default(autoincrement())
   createdAt            DateTime @default(now())
   observedAt           DateTime
-  source               String   @db.VarChar(120)
-  contentHash          String   @unique @db.VarChar(64)
+  source               String
+  contentHash          String   @unique
   ndxClose             Float
   ndxReferenceHigh     Float
   ndxDrawdownPercent   Float
