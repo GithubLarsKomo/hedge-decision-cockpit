@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
- type CliOptions = {
+type CliOptions = {
   envFile: string;
   observationStart?: string;
   observationEnd?: string;
@@ -11,11 +11,11 @@ import path from 'node:path';
 };
 
 function usage(): string {
-  return `Usage: npm run update:market-data -- [options]\n\nOptions:\n  --env-file <path>          Environment file (default: .env.docker)\n  --start <YYYY-MM-DD>       Explicit FRED observation start\n  --end <YYYY-MM-DD>         Explicit FRED observation end\n  --hedge-coverage <percent> Hedge coverage passed to the decision engine\n  --no-decision              Synchronize market data only\n  --help                     Show this help\n\nWithout --start/--end the canonical overlapping ten-day FRED sync is used.\n`;
+  return `Usage: npm run update:market-data -- [options]\n\nOptions:\n  --env-file <path>          Environment file (default: .env.docker)\n  --start <YYYY-MM-DD>       Explicit FRED observation start\n  --end <YYYY-MM-DD>         Explicit FRED observation end\n  --decision                 Also create/replay the latest hedge decision\n  --hedge-coverage <percent> Create a decision with this hedge coverage\n  --help                     Show this help\n\nWithout --start/--end the canonical overlapping ten-day FRED sync is used.\nBy default only market data is synchronized; --decision opts into decision creation.\n`;
 }
 
 function parseArgs(args: string[]): CliOptions {
-  const options: CliOptions = { envFile: '.env.docker', createDecision: true };
+  const options: CliOptions = { envFile: '.env.docker', createDecision: false };
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -23,8 +23,8 @@ function parseArgs(args: string[]): CliOptions {
       console.log(usage());
       process.exit(0);
     }
-    if (arg === '--no-decision') {
-      options.createDecision = false;
+    if (arg === '--decision') {
+      options.createDecision = true;
       continue;
     }
 
@@ -41,6 +41,7 @@ function parseArgs(args: string[]): CliOptions {
         throw new Error('--hedge-coverage must be a number between 0 and 1000.');
       }
       options.hedgeCoveragePercent = value;
+      options.createDecision = true;
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
