@@ -14,6 +14,8 @@ The migration copies all current Prisma models, including:
 
 IDs and foreign-key relationships are preserved. After the copy, source and SQLite row counts are compared table by table. The old Docker volume is **not** deleted automatically.
 
+The npm migration command runs with `TZ=UTC` on every platform so legacy MariaDB `DATETIME` values retain the same UTC interpretation when written to SQLite.
+
 ## One-time migration on Windows / PowerShell
 
 From the repository directory:
@@ -31,7 +33,13 @@ Stop the old stack and remove obsolete containers, but **do not use `-v`** becau
 docker compose --env-file .env.docker down --remove-orphans
 ```
 
-Run the migration:
+Start the migration-only legacy database and wait until its healthcheck is green:
+
+```powershell
+docker compose --env-file .env.docker --profile migration up -d --wait legacy-db
+```
+
+Then run the migration:
 
 ```powershell
 npm run migrate:mariadb-to-sqlite -- --env-file .env.docker
@@ -40,10 +48,10 @@ npm run migrate:mariadb-to-sqlite -- --env-file .env.docker
 The script will:
 
 1. generate the SQLite Prisma client and apply the schema to `data/hedge.db`;
-2. start `legacy-db` from the Docker Compose `migration` profile using the existing `hedge-decision-db-data` volume;
+2. ensure `legacy-db` is running from the Docker Compose `migration` profile using the existing `hedge-decision-db-data` volume;
 3. copy every supported table in dependency-safe order;
 4. compare source and SQLite row counts;
-5. stop `legacy-db` again.
+5. stop `legacy-db` again unless `--keep-legacy-running` was supplied.
 
 A successful run ends with a JSON verification object where every table has identical `source` and `sqlite` counts.
 
@@ -97,6 +105,7 @@ If the target migration is interrupted, stop the app, remove only the incomplete
 Remove-Item data\hedge.db -ErrorAction SilentlyContinue
 Remove-Item data\hedge.db-shm -ErrorAction SilentlyContinue
 Remove-Item data\hedge.db-wal -ErrorAction SilentlyContinue
+docker compose --env-file .env.docker --profile migration up -d --wait legacy-db
 npm run migrate:mariadb-to-sqlite -- --env-file .env.docker
 ```
 
