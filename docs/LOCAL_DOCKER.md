@@ -11,16 +11,22 @@
 cp .env.docker.example .env.docker
 ```
 
-Ersetze in `.env.docker` alle `CHANGE_ME`-Werte. Zufallswerte kannst Du unter Linux beispielsweise so erzeugen:
+Ersetze in `.env.docker` alle `CHANGE_ME`-Werte. Für den normalen Betrieb wird keine separate Datenbank-Instanz mehr benötigt. SQLite liegt lokal unter:
 
-```bash
-openssl rand -base64 36
+```text
+data/hedge.db
 ```
 
 ## 2. Stack bauen und starten
 
 ```bash
 docker compose --env-file .env.docker up -d --build
+```
+
+Normalerweise startet jetzt nur:
+
+```text
+hedge-decision-app
 ```
 
 Status und Logs:
@@ -42,69 +48,71 @@ Erwartete Antwort:
 {"status":"ok","database":"reachable"}
 ```
 
-## 3. Testdatensatz über die API anlegen
+## 3. Datenhaltung und Backup
 
-```bash
-set -a
-. ./.env.docker
-set +a
+Die Datenbank ist eine einzelne bind-gemountete SQLite-Datei im Repository-Unterordner `data/` und wird von Git ignoriert.
 
-curl --noproxy "*" -X POST "http://localhost:${APP_PORT:-3000}/api/decision" \
-  -H "Authorization: Bearer ${N8N_INGEST_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ndxNow": 21350.2,
-    "ndxHigh2y": 22500.8,
-    "drawdownPercent": -5.11,
-    "vixNow": 14.2,
-    "vixPercentile": 22.4,
-    "action": "BUY_OR_ROLL_PUTS",
-    "severity": "blue",
-    "recommendation": "Lokaler Docker-Testeintrag"
-  }'
+Für ein einfaches konsistentes Datei-Backup stoppe die App kurz:
+
+```powershell
+docker compose --env-file .env.docker stop app
+Copy-Item data\hedge.db data\hedge-backup.db
+docker compose --env-file .env.docker start app
 ```
 
-Danach das Dashboard neu laden.
+Die MariaDB-Konfiguration in `.env.docker` wird nur noch für die einmalige Migration einer bestehenden Installation benötigt. Der `legacy-db`-Service ist einem Compose-Profil zugeordnet und wird bei normalem `docker compose up` nicht gestartet.
 
-## 4. Optional: Beispieldaten einspielen
+Siehe dazu `docs/SQLITE_MIGRATION.md`.
 
-```bash
-docker compose --env-file .env.docker exec app npx tsx prisma/seed.ts
+## 4. Marktdaten ohne n8n aktualisieren
+
+Nach `npm install` kann FRED direkt aus dem Repository synchronisiert werden:
+
+```powershell
+npm run update:market-data -- --env-file .env.docker
 ```
 
-Der produktive Container enthält bewusst nicht alle Entwicklungswerkzeuge. Falls `tsx` dort nicht verfügbar ist, nutze stattdessen den API-Test aus Schritt 3.
+Das benötigt weder n8n noch einen laufenden Next.js-Server. Standardmäßig werden nur Marktdaten aktualisiert.
 
-## 5. Datenbank lokal administrieren
+Mit Decision Engine:
 
-Der Datenbankport wird standardmäßig **nicht** auf den Host veröffentlicht. Für eine temporäre lokale Administration kannst Du einmalig ausführen:
-
-```bash
-docker compose --env-file .env.docker exec db \
-  mariadb -u"${MARIADB_USER:-hedge_user}" -p"${MARIADB_PASSWORD}" \
-  "${MARIADB_DATABASE:-hedge_decision}"
+```powershell
+npm run update:market-data -- --env-file .env.docker --decision
 ```
 
-Alternativ kann für Entwicklungszwecke in `docker-compose.override.yml` Port `127.0.0.1:3307:3306` veröffentlicht werden. Diese Freigabe nicht in die Produktionskonfiguration übernehmen.
+Oder mit expliziter Hedge-Abdeckung:
+
+```powershell
+npm run update:market-data -- --env-file .env.docker --hedge-coverage 0
+```
+
+Weitere Optionen und Task-Scheduler-Beispiel: `docs/FRED_MARKET_DATA.md`.
+
+## 5. SQLite lokal administrieren
+
+Für Prisma Studio auf dem Host:
+
+```powershell
+$env:DATABASE_URL = "file:../data/hedge.db"
+npx prisma studio
+```
+
+Alternativ kann jede SQLite-kompatible Desktop-Anwendung die Datei `data/hedge.db` öffnen. Schreibende Fremdtools nur verwenden, wenn die App gestoppt ist oder die Auswirkungen bewusst sind.
 
 ## 6. Aktualisieren
 
 ```bash
 git pull
+npm install
 docker compose --env-file .env.docker up -d --build
 ```
 
-## 7. Stoppen und entfernen
-
-Container stoppen:
+## 7. Stoppen
 
 ```bash
 docker compose --env-file .env.docker down
 ```
 
-Container **und alle Datenbankdaten** löschen:
+Die SQLite-Datei unter `data/hedge.db` bleibt dabei erhalten.
 
-```bash
-docker compose --env-file .env.docker down -v
-```
-
-Die Option `-v` nur verwenden, wenn die gespeicherte Historie wirklich gelöscht werden soll.
+Zum vollständigen Löschen der aktuellen SQLite-Daten muss die Datei bewusst entfernt werden. `docker compose down -v` ist dafür nicht erforderlich und sollte während der MariaDB-Migrationsphase nicht verwendet werden, weil das Legacy-Volume als Rollback-Kopie erhalten bleiben soll.
