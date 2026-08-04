@@ -20,7 +20,9 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 RUN apk add --no-cache curl openssl \
     && rm -rf /usr/local/lib/node_modules/npm \
-    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx \
+    && mkdir -p /app/data \
+    && chown node:node /app/data
 COPY --chown=node:node --from=builder /app/public ./public
 COPY --chown=node:node --from=builder /app/.next/standalone ./
 COPY --chown=node:node --from=builder /app/.next/static ./.next/static
