@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import DecisionCard from './DecisionCard';
 import ExecutionAuditEvidenceVerifier from './ExecutionAuditEvidenceVerifier';
 import ExecutionAuditForm from './ExecutionAuditForm';
@@ -30,9 +31,11 @@ export type DecisionRow = {
   ndxDrawdownPct: number;
   vixNow: number;
   vixPercentile: number;
+  hedgeCoveragePercent: number | null;
   action: string;
   severity: string;
   recommendation: string;
+  triggeredRules: string[];
   hedgeMarketValueEur: number | null;
   hedgeUnrealizedGainEur: number | null;
   notes: string | null;
@@ -51,6 +54,9 @@ export default function Dashboard({ decisions }: { decisions: DecisionRow[] }) {
         <p className="mt-3 max-w-3xl text-slate-600">
           Regelbasiertes Dashboard für Tail-Risk-Hedges: Aufbau günstiger Puts, Halten in der Korrektur und Realisierung von Hedge-Gewinnen zur Finanzierung von Aktienkäufen im Crash.
         </p>
+        <Link href="/strategy" className="mt-4 inline-flex rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50">
+          Strategie für Einsteiger verstehen →
+        </Link>
       </header>
 
       {latest ? <DecisionCard decision={latest} /> : (
