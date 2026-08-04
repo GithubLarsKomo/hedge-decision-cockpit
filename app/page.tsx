@@ -21,9 +21,13 @@ export default async function Home() {
       ndxDrawdownPct: d.ndxDrawdownPct,
       vixNow: d.vixNow,
       vixPercentile: d.vixPercentile,
+      hedgeCoveragePercent: d.hedgeCoveragePercent?.toNumber() ?? null,
       action: d.action,
       severity: d.severity,
       recommendation: d.recommendation,
+      triggeredRules: Array.isArray(d.triggeredRulesJson)
+        ? d.triggeredRulesJson.filter((rule): rule is string => typeof rule === 'string')
+        : [],
       hedgeMarketValueEur: d.hedgeMarketValueEur?.toNumber() ?? null,
       hedgeUnrealizedGainEur: d.hedgeUnrealizedGainEur?.toNumber() ?? null,
       notes: d.notes,
