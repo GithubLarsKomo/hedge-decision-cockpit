@@ -114,6 +114,7 @@ const TABLES: TableSpec[] = [
 ];
 
 const INSERT_BATCH_SIZE = 25;
+const HOST_SQLITE_URL = 'file:../data/hedge.db';
 
 function usage(): string {
   return `Usage: npm run migrate:mariadb-to-sqlite -- [options]\n\nOptions:\n  --env-file <path>       Environment file (default: .env.docker)\n  --keep-legacy-running   Leave the migration-only MariaDB container running\n  --allow-empty-source    Allow migration from an entirely empty legacy database\n  --help                  Show this help\n`;
@@ -196,8 +197,8 @@ function run(command: string, args: string[], options: { input?: string; quiet?:
   return typeof result.stdout === 'string' ? result.stdout : '';
 }
 
-function localBin(name: string): string {
-  return path.resolve('node_modules', '.bin', process.platform === 'win32' ? `${name}.cmd` : name);
+function prismaCliPath(): string {
+  return path.resolve('node_modules', 'prisma', 'build', 'index.js');
 }
 
 function composeArgs(envFile: string): string[] {
@@ -251,19 +252,22 @@ function normalizeRow(row: Row, spec: TableSpec): Row {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const envFile = path.resolve(options.envFile);
+  const inheritedDatabaseUrl = process.env.DATABASE_URL;
   await loadEnvFile(envFile);
   await mkdir(path.resolve('data'), { recursive: true });
 
-  process.env.DATABASE_URL ||= 'file:../data/hedge.db';
+  // .env.docker belongs to the container runtime. A stale/container-only DATABASE_URL
+  // in that file must never redirect the host migration away from ./data/hedge.db.
+  process.env.DATABASE_URL = inheritedDatabaseUrl || HOST_SQLITE_URL;
 
-  const prismaBin = localBin('prisma');
-  if (!existsSync(prismaBin)) {
+  const prismaCli = prismaCliPath();
+  if (!existsSync(prismaCli)) {
     throw new Error('Prisma CLI not installed. Run npm install first.');
   }
 
   console.log('Generating SQLite Prisma client and applying the SQLite schema...');
-  run(prismaBin, ['generate'], { quiet: true });
-  run(prismaBin, ['db', 'push', '--skip-generate'], { quiet: true });
+  run(process.execPath, [prismaCli, 'generate'], { quiet: true });
+  run(process.execPath, [prismaCli, 'db', 'push', '--skip-generate'], { quiet: true });
 
   const dockerArgs = composeArgs(envFile);
   console.log('Starting migration-only legacy MariaDB service...');
