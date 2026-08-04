@@ -10,6 +10,8 @@ type CliOptions = {
   createDecision: boolean;
 };
 
+const HOST_SQLITE_URL = 'file:../data/hedge.db';
+
 function usage(): string {
   return `Usage: npm run update:market-data -- [options]\n\nOptions:\n  --env-file <path>          Environment file (default: .env.docker)\n  --start <YYYY-MM-DD>       Explicit FRED observation start\n  --end <YYYY-MM-DD>         Explicit FRED observation end\n  --decision                 Also create/replay the latest hedge decision\n  --hedge-coverage <percent> Create a decision with this hedge coverage\n  --help                     Show this help\n\nWithout --start/--end the canonical overlapping ten-day FRED sync is used.\nBy default only market data is synchronized; --decision opts into decision creation.\n`;
 }
@@ -79,10 +81,12 @@ async function loadEnvFile(filePath: string): Promise<void> {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const envFile = path.resolve(options.envFile);
+  const inheritedDatabaseUrl = process.env.DATABASE_URL;
   await loadEnvFile(envFile);
 
   await mkdir(path.resolve('data'), { recursive: true });
-  process.env.DATABASE_URL ||= 'file:../data/hedge.db';
+  // Ignore any Docker-only DATABASE_URL that may be present in the env file.
+  process.env.DATABASE_URL = inheritedDatabaseUrl || HOST_SQLITE_URL;
 
   if (!process.env.FRED_API_KEY?.trim()) {
     throw new Error(`FRED_API_KEY is required. Add it to ${envFile} or the process environment.`);
