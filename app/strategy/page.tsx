@@ -1,4 +1,10 @@
 import Link from 'next/link';
+import StrategyColorLegend from '@/components/StrategyColorLegend';
+import {
+  STRATEGY_TONE_STYLES,
+  VIX_EXPENSIVE_OVERLAY,
+  type StrategyTone
+} from '@/components/strategy-presentation';
 import { DEFAULT_STRATEGY_CONFIG as config } from '@/lib/strategy-config';
 
 function pct(value: number): string {
@@ -36,26 +42,46 @@ export default function StrategyGuidePage() {
         <div className="mt-3 space-y-3 text-slate-700">
           <p>Die Hedge-Abdeckung sagt dem Regelwerk, wie weit der konfigurierte Ziel-Hedge bereits erreicht ist. <strong>100 %</strong> bedeutet hier: das in der Strategie definierte Ziel ist erreicht. <strong>0 %</strong> bedeutet: keine Zielabdeckung ist gemeldet.</p>
           <p>Wichtig: 100 % Hedge-Abdeckung bedeutet nicht automatisch, dass jeder Verlust des gesamten Portfolios wirtschaftlich vollständig versichert ist. Es ist ein relativer Steuerwert gegenüber dem im Cockpit definierten Hedge-Ziel.</p>
-          <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900">Wenn die Hedge-Abdeckung unbekannt ist, kann die aktuelle Regelversion 2.1.0 trotzdem ein BUY_OR_ROLL_PUTS-Signal erzeugen. Das ist dann zunächst ein Markt-Setup, keine positionsbezogen bestätigte Kaufnotwendigkeit.</p>
+          <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900">Wenn die Hedge-Abdeckung unbekannt ist, kann die aktuelle Regelversion {config.version} trotzdem ein BUY_OR_ROLL_PUTS-Signal erzeugen. Das ist dann zunächst ein Markt-Setup, keine positionsbezogen bestätigte Kaufnotwendigkeit.</p>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-slate-950">3. Der Ablauf der Strategie</h2>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          Die Hauptfarben zeigen jetzt nur noch die primäre Strategie- und Drawdown-Stufe. Dadurch steigt die Eskalation eindeutig von Gelb über Amber und Orange bis Rot. Die Bewertung „VIX teuer“ läuft unabhängig davon als separates Overlay.
+        </p>
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <StrategyColorLegend />
+        </div>
         <div className="mt-5 space-y-4">
-          <Step badge="Blau" badgeColor="blue" title="Absicherung aufbauen oder rollen" text={`Wenn der NDX weniger als ${pct(Math.abs(config.nearHighPercent))} % unter seinem 2-Jahres-Hoch liegt, der VIX unter dem ${pct(config.cheapVolatilityPercentile)}. Perzentil liegt und die gemeldete Hedge-Abdeckung unter ${pct(config.targetHedgeCoveragePercent)} % liegt, ist das typische Aufbau-Setup erreicht.`} />
-          <Step badge="Grün" badgeColor="green" title="Nichts ändern" text="Wenn keine Aktionsregel greift, bleibt die vorhandene Struktur unverändert. Grün bedeutet also nicht „Markt sicher“, sondern lediglich „laut Regelwerk aktuell keine Änderung nötig“." />
-          <Step badge="Orange" badgeColor="orange" title="Keine teuren neuen Puts kaufen" text={`Liegt das VIX-Perzentil über ${pct(config.expensiveVolatilityPercentile)} %, gelten neue Puts als historisch teuer. Außer bei den vorrangigen Crash-Regeln wird dann kein neuer Hedge aufgebaut.`} />
-          <Step badge="Gelb / Orange" badgeColor="yellow" title="Hedge in der Korrektur arbeiten lassen" text={`Ab ${pct(Math.abs(config.drawdownHoldPercent))} % Drawdown soll der bestehende Hedge gehalten werden. Ist Volatilität zusätzlich sehr teuer, wird das Signal orange.`} />
-          <Step badge="Gelb" badgeColor="yellow" title="Erste Hedge-Gewinne realisieren" text={`Ab ${pct(Math.abs(config.drawdownRealizeFirstPercent))} % Drawdown sieht die Strategie vor, 25 % der Hedge-Gewinne zu realisieren.`} />
-          <Step badge="Orange" badgeColor="orange" title="Weitere Gewinne freisetzen" text={`Ab ${pct(Math.abs(config.drawdownRealizeSecondPercent))} % Drawdown werden laut Regelwerk weitere 35 % realisiert.`} />
-          <Step badge="Rot" badgeColor="red" title="Im extremen Drawdown Großteil monetarisieren" text={`Ab ${pct(Math.abs(config.drawdownCloseMostPercent))} % Drawdown soll der Großteil des Hedges geschlossen und die freigesetzte Liquidität nach dem Reinvestitionsplan für Aktienkäufe eingesetzt werden.`} />
+          <Step tone="blue" title="Absicherung aufbauen oder rollen" text={`Wenn der NDX weniger als ${pct(Math.abs(config.nearHighPercent))} % unter seinem 2-Jahres-Hoch liegt, der VIX unter dem ${pct(config.cheapVolatilityPercentile)}. Perzentil liegt und die gemeldete Hedge-Abdeckung unter ${pct(config.targetHedgeCoveragePercent)} % liegt, ist das typische Aufbau-Setup erreicht.`} />
+          <Step tone="green" title="Nichts ändern" text="Wenn keine Aktionsregel greift, bleibt die vorhandene Struktur unverändert. Grün bedeutet also nicht „Markt sicher“, sondern lediglich „laut Regelwerk aktuell keine Änderung nötig“." />
+          <Step tone="yellow" title="Hedge in der Korrektur arbeiten lassen" text={`Ab ${pct(Math.abs(config.drawdownHoldPercent))} % Drawdown soll der bestehende Hedge gehalten werden. Ein teurer VIX verändert diese primäre Stufe nicht mehr, sondern wird zusätzlich als Volatilitäts-Overlay angezeigt.`} />
+          <Step tone="amber" title="Erste Hedge-Gewinne realisieren" text={`Ab ${pct(Math.abs(config.drawdownRealizeFirstPercent))} % Drawdown sieht die Strategie vor, 25 % der Hedge-Gewinne zu realisieren.`} />
+          <Step tone="orange" title="Weitere Gewinne freisetzen" text={`Ab ${pct(Math.abs(config.drawdownRealizeSecondPercent))} % Drawdown werden laut Regelwerk weitere 35 % realisiert.`} />
+          <Step tone="red" title="Im extremen Drawdown Großteil monetarisieren" text={`Ab ${pct(Math.abs(config.drawdownCloseMostPercent))} % Drawdown soll der Großteil des Hedges geschlossen und die freigesetzte Liquidität nach dem Reinvestitionsplan für Aktienkäufe eingesetzt werden.`} />
+        </div>
+
+        <div className={`mt-5 rounded-xl border p-4 ${VIX_EXPENSIVE_OVERLAY.cardClass}`}>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${VIX_EXPENSIVE_OVERLAY.badgeClass}`}>
+              {VIX_EXPENSIVE_OVERLAY.label}
+            </span>
+            <h3 className="font-semibold">Keine teuren neuen Puts kaufen</h3>
+          </div>
+          <p className="mt-2 text-sm leading-6">
+            Liegt das VIX-Perzentil über {pct(config.expensiveVolatilityPercentile)} %, gelten neue Puts als historisch teuer. Außer bei den vorrangigen Crash-Regeln wird dann kein neuer Hedge aufgebaut. Dieses Signal ist bewusst kein Teil der Gelb→Amber→Orange→Rot-Eskalation.
+          </p>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
         <h2 className="text-xl font-semibold text-slate-950">4. Warum diese Reihenfolge wichtig ist</h2>
-        <p className="mt-3 text-slate-700">Die Regelengine prüft die starken Drawdowns zuerst. Das bedeutet: In einem echten Crash hat die Monetarisierung eines bereits vorhandenen Hedges Vorrang vor der Frage, ob der VIX gerade teuer ist. Erst außerhalb dieser Crash-Stufen entscheidet die VIX-Bewertung darüber, ob neue Puts gekauft werden sollen.</p>
+        <div className="mt-3 space-y-3 text-slate-700">
+          <p>Die Regelengine prüft die starken Drawdowns zuerst. In einem echten Crash hat deshalb die Monetarisierung eines bereits vorhandenen Hedges Vorrang vor der Frage, ob der VIX gerade teuer ist.</p>
+          <p>Die Darstellung trennt diese beiden Achsen jetzt sichtbar: <strong>Blau/Grün/Gelb/Amber/Orange/Rot</strong> beschreibt die primäre Strategiestufe; <strong>VIX teuer</strong> ist ein zusätzliches Kosten-Overlay, das den Neukauf von Puts begrenzt.</p>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -95,20 +121,14 @@ function Concept({ title, text }: { title: string; text: string }) {
   );
 }
 
-type BadgeColor = "blue" | "green" | "yellow" | "red" | "orange";
-const badgeColorClasses: Record<BadgeColor, string> = {
-  blue: "bg-blue-100 text-blue-800",
-  green: "bg-green-100 text-green-800",
-  orange: "bg-orange-100 text-orange-800",
-  yellow: "bg-yellow-100 text-yellow-800",
-  red: "bg-red-100 text-red-800",
-};
-
-function Step({ badge, badgeColor, title, text }: { badge: string; badgeColor?: BadgeColor; title: string; text: string }) {
+function Step({ tone, title, text }: { tone: StrategyTone; title: string; text: string }) {
+  const style = STRATEGY_TONE_STYLES[tone];
   return (
     <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide shadow-sm ${badgeColor ? badgeColorClasses[badgeColor] ?? "bg-white text-slate-600" : "bg-white text-slate-600"}`}>{badge}</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide shadow-sm ${style.badgeClass}`}>
+          {style.label}
+        </span>
         <h3 className="font-semibold text-slate-950">{title}</h3>
       </div>
       <p className="mt-2 text-sm leading-6 text-slate-700">{text}</p>
