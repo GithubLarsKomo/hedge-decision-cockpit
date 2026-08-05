@@ -1,4 +1,10 @@
 import type { DecisionRow } from './Dashboard';
+import {
+  VIX_EXPENSIVE_OVERLAY,
+  hasExpensiveVixOverlay,
+  strategyToneStyleForAction
+} from './strategy-presentation';
+import { actionLabel } from '@/lib/strategy-explanation';
 
 function fmt(n: number, digits = 2) {
   return new Intl.NumberFormat('de-DE', { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(n);
@@ -19,20 +25,38 @@ export default function HistoryTable({ decisions }: { decisions: DecisionRow[] }
               <th className="px-4 py-3">Drawdown</th>
               <th className="px-4 py-3">VIX</th>
               <th className="px-4 py-3">Aktion</th>
-              <th className="px-4 py-3">Signal</th>
+              <th className="px-4 py-3">Strategiestufe</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {decisions.map(d => (
-              <tr key={d.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3">{new Date(d.createdAt).toLocaleString('de-DE')}</td>
-                <td className="px-4 py-3">{fmt(d.ndxNow)}</td>
-                <td className="px-4 py-3">{fmt(d.ndxDrawdownPct)} %</td>
-                <td className="px-4 py-3">{fmt(d.vixNow)}</td>
-                <td className="px-4 py-3 font-medium">{d.action}</td>
-                <td className="px-4 py-3">{d.severity}</td>
-              </tr>
-            ))}
+            {decisions.map(d => {
+              const presentation = strategyToneStyleForAction(d.action);
+              const vixOverlay = hasExpensiveVixOverlay(d.triggeredRules);
+              return (
+                <tr key={d.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">{new Date(d.createdAt).toLocaleString('de-DE')}</td>
+                  <td className="px-4 py-3">{fmt(d.ndxNow)}</td>
+                  <td className="px-4 py-3">{fmt(d.ndxDrawdownPct)} %</td>
+                  <td className="px-4 py-3">{fmt(d.vixNow)}</td>
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-slate-900">{actionLabel(d.action)}</div>
+                    <div className="mt-1 text-xs text-slate-500">{d.action}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${presentation?.badgeClass ?? 'bg-slate-100 text-slate-700'}`}>
+                        {presentation?.label ?? d.severity}
+                      </span>
+                      {vixOverlay && (
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${VIX_EXPENSIVE_OVERLAY.badgeClass}`}>
+                          {VIX_EXPENSIVE_OVERLAY.label}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
