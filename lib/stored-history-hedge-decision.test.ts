@@ -53,6 +53,7 @@ test('decision fingerprint is stable for identical history signals and changes w
 test('runner persists a new decision and normalizes the requested source/as-of', async () => {
   let derivedOptions: unknown;
   let persistedInput: unknown;
+  let lookedUpFingerprint = '';
   const result = await runStoredHistoryHedgeDecisionWithDependencies({
     source: '  source-a  ',
     asOf: '2026-08-03T20:00:00Z',
@@ -66,8 +67,9 @@ test('runner persists a new decision and normalizes the requested source/as-of',
       persistedInput = input;
       return { id: 42, input };
     },
-    async findByFingerprint() {
-      throw new Error('should not look up a new decision');
+    async findByFingerprint(inputFingerprint) {
+      lookedUpFingerprint = inputFingerprint;
+      return null;
     }
   });
 
@@ -77,18 +79,21 @@ test('runner persists a new decision and normalizes the requested source/as-of',
     hedgeCoveragePercent: 75
   });
   assert.equal((persistedInput as { source: string }).source, 'source-a');
+  assert.equal(lookedUpFingerprint, result.input.inputFingerprint);
   assert.equal(result.id, 42);
   assert.equal(result.created, true);
 });
 
-test('runner reports deterministic duplicate replay as unchanged', async () => {
+test('runner returns an existing deterministic replay without attempting another insert', async () => {
+  let persistCalled = false;
   let lookedUpFingerprint = '';
   const result = await runStoredHistoryHedgeDecisionWithDependencies({ source: 'source-a' }, {
     async deriveSignals() {
       return signals();
     },
-    async persist() {
-      throw new DecisionConflictError();
+    async persist(input) {
+      persistCalled = true;
+      return { id: 99, input };
     },
     async findByFingerprint(inputFingerprint) {
       lookedUpFingerprint = inputFingerprint;
@@ -98,7 +103,28 @@ test('runner reports deterministic duplicate replay as unchanged', async () => {
 
   assert.equal(result.created, false);
   assert.equal(result.id, 7);
+  assert.equal(persistCalled, false);
   assert.equal(lookedUpFingerprint, result.input.inputFingerprint);
+});
+
+test('runner still recovers from a concurrent duplicate insert race', async () => {
+  let lookupCount = 0;
+  const result = await runStoredHistoryHedgeDecisionWithDependencies({ source: 'source-a' }, {
+    async deriveSignals() {
+      return signals();
+    },
+    async persist() {
+      throw new DecisionConflictError();
+    },
+    async findByFingerprint() {
+      lookupCount += 1;
+      return lookupCount === 1 ? null : { id: 8 };
+    }
+  });
+
+  assert.equal(result.created, false);
+  assert.equal(result.id, 8);
+  assert.equal(lookupCount, 2);
 });
 
 test('runner rejects invalid source and hedge coverage before derivation', async () => {

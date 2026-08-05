@@ -112,15 +112,19 @@ export async function runStoredHistoryHedgeDecisionWithDependencies(
   const options = normalizeOptions(rawOptions);
   const signals = await dependencies.deriveSignals(options);
   const input = buildStoredHistoryDecisionInput(signals, options.source, config);
+  const inputFingerprint = input.inputFingerprint!;
+
+  const existing = await dependencies.findByFingerprint(inputFingerprint);
+  if (existing) return { id: existing.id, created: false, input };
 
   try {
     const persisted = await dependencies.persist(input);
     return { id: persisted.id, created: true, input: persisted.input };
   } catch (error) {
     if (!(error instanceof DecisionConflictError)) throw error;
-    const existing = await dependencies.findByFingerprint(input.inputFingerprint!);
-    if (!existing) throw error;
-    return { id: existing.id, created: false, input };
+    const raced = await dependencies.findByFingerprint(inputFingerprint);
+    if (!raced) throw error;
+    return { id: raced.id, created: false, input };
   }
 }
 
