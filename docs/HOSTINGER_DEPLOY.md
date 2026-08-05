@@ -1,102 +1,186 @@
-# Hostinger Deployment – Next.js
+# Hostinger VPS Deployment – Docker + SQLite
 
-## 1. GitHub Repo erstellen
+Diese Anleitung beschreibt den aktuellen Server-Pfad des Hedge Decision Cockpits. Der Normalbetrieb verwendet **einen App-Container plus die bind-gemountete SQLite-Datei `data/hedge.db`**. Eine separate MariaDB-Instanz ist nicht mehr erforderlich.
 
-```bash
-git init
-git add .
-git commit -m "Initial Next.js hedge cockpit"
-git branch -M main
-git remote add origin git@github.com:DEINUSER/hedge-decision-cockpit-nextjs.git
-git push -u origin main
-```
+## 1. Voraussetzungen
 
-## 2. Hostinger Node.js App anlegen
+Auf dem VPS:
 
-Im hPanel:
+- Docker Engine
+- Docker Compose Plugin
+- Git
+- freier lokaler oder veröffentlichter App-Port
 
-```text
-Websites → Manage → Node.js → Create application
-```
+Optional für direkte CLI-Marktupdates aus dem Repository:
 
-Empfohlene Werte:
+- Node.js 22
+- npm
 
-```text
-Node.js version: 20
-Application root: hedge-decision-cockpit-nextjs
-Application startup file: node_modules/next/dist/bin/next
-```
-
-Je nach Hostinger UI kannst Du GitHub direkt importieren oder das Repo per SSH klonen.
-
-## 3. Environment setzen
-
-In Hostinger oder `.env` auf dem Server:
-
-```env
-DATABASE_URL="mysql://DB_USER:DB_PASSWORD@127.0.0.1:3306/DB_NAME"
-N8N_INGEST_TOKEN="sehr-langer-zufaelliger-token"
-```
-
-## 4. Build
-
-Per SSH im Projektordner:
+## 2. Repository klonen
 
 ```bash
-npm ci
-npx prisma generate
-npx prisma db push
-npm run build
+git clone https://github.com/GithubLarsKomo/hedge-decision-cockpit.git
+cd hedge-decision-cockpit
 ```
 
-## 5. Start command
+## 3. Environment anlegen
 
 ```bash
-npm run start -- -p $PORT
+cp .env.docker.example .env.docker
 ```
 
-Falls Hostinger einen konkreten Port erwartet, den von Hostinger gesetzten Port verwenden.
+Mindestens setzen:
 
-## 6. n8n verbinden
+```dotenv
+APP_PORT=3000
+N8N_INGEST_TOKEN=<sehr-langer-zufaelliger-token>
+FRED_API_KEY=<fred-api-key>
+DASHBOARD_USER=admin
+DASHBOARD_PASSWORD=<starkes-passwort>
+```
 
-Im HTTP Request Node:
+`DATABASE_URL` wird für Docker absichtlich nicht in `.env.docker` gepflegt. Compose setzt intern:
 
 ```text
-POST https://DEINE-DOMAIN.de/api/decision
-Authorization: Bearer <N8N_INGEST_TOKEN>
-Content-Type: application/json
+file:/app/data/hedge.db
 ```
 
-## 7. SSH-Tunnel auf dem iPhone
-
-Mit Termius:
+Die persistente Host-Datei liegt unter:
 
 ```text
-Host: HOSTINGER_SSH_HOST
-Port: HOSTINGER_SSH_PORT
-User: HOSTINGER_USER
-Auth: SSH Key bevorzugt
+data/hedge.db
 ```
 
-Local Port Forward:
+Die MariaDB-Variablen in `.env.docker` werden nur für eine einmalige Altbestandsmigration benötigt.
+
+## 4. Starten
+
+```bash
+docker compose --env-file .env.docker up -d --build
+```
+
+Status:
+
+```bash
+docker compose --env-file .env.docker ps
+```
+
+Logs:
+
+```bash
+docker compose --env-file .env.docker logs -f app
+```
+
+Healthcheck lokal auf dem VPS:
+
+```bash
+curl --noproxy "*" http://127.0.0.1:3000/api/health
+```
+
+Erwartet:
+
+```json
+{"status":"ok","database":"reachable"}
+```
+
+## 5. Reverse Proxy / Domain
+
+Für einen öffentlich erreichbaren Betrieb sollte der App-Port nicht unnötig direkt ins Internet exponiert werden. Nutze den vorhandenen Hostinger-/Coolify-/Caddy-/Traefik-/Nginx-Reverse-Proxy und terminiere TLS dort.
+
+Das Dashboard selbst sollte zusätzlich mit `DASHBOARD_USER` und `DASHBOARD_PASSWORD` geschützt bleiben.
+
+API-Endpunkte werden separat über den Bearer-Token abgesichert.
+
+## 6. Marktdaten ohne n8n aktualisieren
+
+### Variante A – empfohlener Server-Pfad über die lokale HTTP-API
+
+Wenn der App-Container ohnehin läuft, kann cron direkt den Server-Endpunkt aufrufen. Dadurch schreibt nur die laufende Anwendung in SQLite.
+
+Marktdaten synchronisieren:
+
+```bash
+curl --fail --silent --show-error \
+  -X POST http://127.0.0.1:3000/api/market-data/fred/sync \
+  -H "Authorization: Bearer ${N8N_INGEST_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+Die Variablen können beispielsweise aus einer root-only Environment-Datei geladen werden. Secrets nicht direkt in eine öffentlich lesbare Crontab schreiben.
+
+Beispiel für einen werktäglichen Lauf nach US-Börsenschluss:
+
+```cron
+30 22 * * 1-5 /opt/hedge-decision-cockpit/scripts/server-market-update.sh
+```
+
+Der konkrete Wrapper sollte `N8N_INGEST_TOKEN` sicher laden und anschließend den lokalen API-Aufruf ausführen.
+
+### Variante B – direkte Repository-CLI
+
+Mit installiertem Node.js/npm:
+
+```bash
+npm install
+npm run update:market-data -- --env-file .env.docker
+```
+
+Dieser Pfad benötigt weder n8n noch den Next.js-Server. Er arbeitet direkt mit `data/hedge.db`.
+
+Standardmäßig werden nur Marktdaten aktualisiert. Eine Decision wird nur mit `--decision` oder `--hedge-coverage` erzeugt.
+
+Weitere Details: `docs/FRED_MARKET_DATA.md`.
+
+## 7. Optionales n8n
+
+n8n ist nicht erforderlich. Falls es bereits betrieben wird, kann weiterhin folgender Workflow importiert werden:
 
 ```text
-Local: 127.0.0.1:13306
-Remote/Destination: 127.0.0.1:3306
+n8n/hedge-market-data-fred-workflow.json
 ```
 
-MySQL-App auf dem iPhone:
+Dieser Workflow enthält keine eigene Hedge-Regelengine. Er orchestriert nur die serverseitigen FRED- und Decision-Endpunkte.
 
-```text
-Host: 127.0.0.1
-Port: 13306
-User: DB_USER
-Password: DB_PASSWORD
-Database: DB_NAME
+## 8. SQLite-Backup
+
+Für ein einfaches konsistentes Datei-Backup die App kurz stoppen:
+
+```bash
+docker compose --env-file .env.docker stop app
+cp data/hedge.db "data/hedge-$(date +%F-%H%M%S).db"
+docker compose --env-file .env.docker start app
 ```
 
-## 8. Hinweise
+Backups zusätzlich außerhalb des VPS sichern.
 
-- Remote MySQL nicht öffnen.
-- n8n schreibt über die HTTPS-API, nicht direkt in die DB.
-- DB-Zugriff nur durch die Next.js-App lokal auf Hostinger oder über SSH-Tunnel.
+## 9. Aktualisieren
+
+```bash
+git pull --ff-only
+npm install
+docker compose --env-file .env.docker up -d --build
+```
+
+`npm install` ist für den Docker-Build selbst nicht erforderlich, aber sinnvoll, wenn die direkte Host-CLI verwendet wird.
+
+## 10. MariaDB-Altbestand migrieren
+
+Nur für bestehende Installationen mit dem früheren MariaDB-Volume:
+
+```bash
+npm install
+npm run migrate:mariadb-to-sqlite -- --env-file .env.docker
+```
+
+Der Migrationspfad startet MariaDB ausschließlich über das Compose-Profil `migration`, kopiert die unterstützten Tabellen nach SQLite und verifiziert die Row-Counts. Das Legacy-Volume wird nicht automatisch gelöscht.
+
+Siehe `docs/SQLITE_MIGRATION.md`.
+
+## 11. Betriebssicherheit
+
+- SQLite-Datei und Backups nicht committen.
+- Dashboard nur geschützt beziehungsweise über vertrauenswürdige Netze bereitstellen.
+- API-Token und FRED-Key regelmäßig prüfen und sicher speichern.
+- MariaDB-Port nicht öffnen; MariaDB ist im Normalbetrieb nicht erforderlich.
+- Kein Pfad im Cockpit platziert automatisch Broker-Orders.
