@@ -186,6 +186,7 @@ function run(command: string, args: string[], options: { input?: string; quiet?:
     encoding: 'utf8',
     env: process.env,
     shell: false,
+    maxBuffer: 64 * 1024 * 1024,
     stdio: options.quiet ? ['pipe', 'pipe', 'pipe'] : ['pipe', 'inherit', 'inherit']
   });
 
@@ -271,7 +272,7 @@ async function main() {
 
   const dockerArgs = composeArgs(envFile);
   console.log('Starting migration-only legacy MariaDB service...');
-  run('docker', [...dockerArgs, 'up', '-d', 'legacy-db']);
+  run('docker', [...dockerArgs, 'up', '-d', '--wait', 'legacy-db']);
 
   const { PrismaClient } = await import('@prisma/client');
   const prisma = new PrismaClient();
