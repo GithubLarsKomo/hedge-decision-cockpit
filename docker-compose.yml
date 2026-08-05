@@ -1,5 +1,6 @@
 services:
   app:
+    image: hedge-decision-cockpit-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -25,6 +26,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+
+  fred-scheduler:
+    image: hedge-decision-cockpit-app
+    container_name: hedge-decision-fred-scheduler
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN}
+      FRED_SYNC_URL: http://app:3000/api/market-data/fred/sync
+      FRED_SYNC_TIME: ${FRED_SYNC_TIME:-22:30}
+      FRED_SYNC_POLL_SECONDS: ${FRED_SYNC_POLL_SECONDS:-60}
+      TZ: ${FRED_SYNC_TIMEZONE:-Europe/Berlin}
+    volumes:
+      - ./data:/app/data
+    entrypoint:
+      - ./fred-scheduler.sh
 
   legacy-db:
     profiles: ["migration"]
