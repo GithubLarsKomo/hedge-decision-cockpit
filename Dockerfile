@@ -21,7 +21,7 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
-RUN apk add --no-cache curl openssl \
+RUN apk add --no-cache curl openssl tzdata \
     && rm -rf /usr/local/lib/node_modules/npm \
     && rm -f /usr/local/bin/npm /usr/local/bin/npx \
     && mkdir -p /app/data \
@@ -34,8 +34,10 @@ COPY --chown=node:node --from=builder /app/node_modules/.prisma ./node_modules/.
 COPY --chown=node:node --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --chown=node:node --from=builder /app/scripts/bootstrap-sqlite.mjs ./bootstrap-sqlite.mjs
 COPY --chown=node:node --from=builder /app/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
-RUN sed -i 's/\r$//' ./docker-entrypoint.sh \
-    && chmod +x ./docker-entrypoint.sh
+COPY --chown=node:node --from=builder /app/scripts/fred-scheduler.sh ./fred-scheduler.sh
+RUN sed -i 's/\r$//' ./docker-entrypoint.sh ./fred-scheduler.sh \
+    && sh -n ./fred-scheduler.sh \
+    && chmod +x ./docker-entrypoint.sh ./fred-scheduler.sh
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
