@@ -5,6 +5,12 @@ const port = Number(process.env.FRED_SCHEDULER_SMOKE_PORT ?? 3200);
 const expectedToken = process.env.FRED_SCHEDULER_SMOKE_TOKEN ?? 'test-token-for-ci';
 
 const server = http.createServer((request, response) => {
+  if (request.method === 'GET' && request.url === '/health') {
+    response.writeHead(200, { 'content-type': 'text/plain' });
+    response.end('ok');
+    return;
+  }
+
   const chunks = [];
   request.on('data', chunk => chunks.push(chunk));
   request.on('end', () => {
