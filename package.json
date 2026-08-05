@@ -1,6 +1,6 @@
 {
   "name": "hedge-decision-cockpit-nextjs",
-  "version": "1.121.3",
+  "version": "1.122.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
