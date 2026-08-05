@@ -98,17 +98,21 @@ POST /api/market-data/fred/sync
 POST /api/hedge-decisions/from-history
 ```
 
-They still use `Authorization: Bearer <N8N_INGEST_TOKEN>` for backward compatibility. n8n is therefore optional rather than required.
+They still use `Authorization: Bearer <N8N_INGEST_TOKEN>` for backward compatibility. The token name is historical; the endpoints do not require n8n.
 
 ## 5. Optional n8n workflow
 
-The existing workflow remains importable from:
+The maintained optional workflow is:
 
 ```text
 n8n/hedge-market-data-fred-workflow.json
 ```
 
 It can continue to run at 22:30 Europe/Berlin on weekdays, but it is no longer the canonical requirement for local market-data maintenance.
+
+The workflow deliberately contains **no copy of the hedge decision rules**. It calls the server-side FRED sync endpoint and then the server-side stored-history Decision endpoint. `lib/decision-engine.ts` together with `lib/strategy-config.ts` remains the single source of truth for thresholds, rule priority and rule version.
+
+The former Yahoo/Code-node workflow and its duplicated `n8n/decision-engine.js` implementation were removed to prevent rule drift.
 
 ## Provider attribution and data terms
 

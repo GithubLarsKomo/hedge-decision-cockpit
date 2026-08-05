@@ -1,14 +1,27 @@
 # NASDAQ Hedge Decision Cockpit – Next.js
 
-Versionierbares Dashboard für ein regelbasiertes NASDAQ-Tail-Risk-Hedge-Programm. Das System dokumentiert Entscheidungen und Portfolio-/Hedge-Snapshots, führt aber keine Orders aus.
+Version **1.121.0**. Browser- und CLI-gestütztes Entscheidungs- und Monitoring-Tool für ein regelbasiertes NASDAQ-Tail-Risk-Hedge-Programm. Das Cockpit dokumentiert Markt-, Portfolio-, Mapping-, Hedge- und Review-Zustände reproduzierbar, führt aber keine Broker-Orders aus.
 
-## Stack
+## Aktueller Stack
 
 - Next.js App Router, TypeScript und Tailwind CSS
 - Chart.js
-- Prisma mit MySQL/MariaDB
-- n8n API-Ingest über `POST /api/decision`
-- Vitest und GitHub Actions
+- Prisma 6 mit SQLite
+- FRED als kanonischer Markt-Datenprovider für `NASDAQ100` und `VIXCLS`
+- Node-Test-Runner über `tsx --test`
+- Docker Compose für den lokalen/Server-Betrieb
+- GitHub Actions mit Typecheck, Lint, Tests, Build, Runtime-Smoke-Test, Container-Scan, SBOM und Provenance
+
+## Architekturgrenzen
+
+Das Cockpit trennt bewusst vier Verantwortlichkeiten:
+
+1. **Portfolio-Kontext** – versionierte Portfolio-Snapshots, Exposure-Mapping und ETF-Nearest-Neighbour-Artefakte.
+2. **Marktdaten** – persistierte tägliche NDX/VIX-Beobachtungen mit Provider-Provenance.
+3. **Hedge-Regelengine** – deterministische Ableitung der taktischen Empfehlung aus Marktsignalen und optionaler Hedge-Abdeckung.
+4. **Human Review** – Mapping-Review, Decision-Review und expliziter Abschluss eines Monatslaufs.
+
+Es gibt keine automatische ETF-Umschaltung, keine Broker-Order und keine automatische Execution Request.
 
 ## Lokal mit Docker starten
 
@@ -20,9 +33,20 @@ docker compose --env-file .env.docker up -d --build
 
 Dashboard: `http://localhost:3000`
 
-Ausführliche Anleitung: `docs/LOCAL_DOCKER.md`.
+Der Normalbetrieb startet nur den App-Container. Die SQLite-Datenbank liegt persistent unter:
 
-## Lokal starten
+```text
+data/hedge.db
+```
+
+MariaDB ist nur noch als opt-in `migration`-Profil für die einmalige Übernahme einer bestehenden Installation vorhanden.
+
+Ausführlich:
+
+- `docs/LOCAL_DOCKER.md`
+- `docs/SQLITE_MIGRATION.md`
+
+## Lokal ohne Docker entwickeln
 
 ```bash
 cp .env.example .env
@@ -33,7 +57,123 @@ npm run seed:sample
 npm run dev
 ```
 
-Nach Änderungen am Prisma-Schema muss vor dem Deployment `npx prisma db push` oder eine kontrollierte Migration ausgeführt werden.
+Die lokale `.env` verwendet eine SQLite-URL wie `file:../data/hedge.db`.
+
+## Marktdaten ohne n8n aktualisieren
+
+Der empfohlene lokale Wartungspfad läuft direkt aus dem Repository und benötigt weder n8n noch einen laufenden Next.js-Server:
+
+```powershell
+npm run update:market-data -- --env-file .env.docker
+```
+
+Standardmäßig werden **nur Marktdaten** synchronisiert. Der Befehl verwendet ein überlappendes Zehn-Tage-Fenster und ist idempotent.
+
+Expliziter Backfill:
+
+```powershell
+npm run update:market-data -- --env-file .env.docker --start 1990-01-02
+```
+
+Optional zusätzlich eine Hedge-Decision erzeugen oder wiederverwenden:
+
+```powershell
+npm run update:market-data -- --env-file .env.docker --decision
+```
+
+Mit bekannter Hedge-Abdeckung:
+
+```powershell
+npm run update:market-data -- --env-file .env.docker --hedge-coverage 70
+```
+
+Details und Scheduling-Beispiele: `docs/FRED_MARKET_DATA.md`.
+
+## Kanonische Regelengine
+
+Die **einzige kanonische Hedge-Regelengine** liegt in:
+
+- `lib/decision-engine.ts`
+- `lib/strategy-config.ts`
+
+Die aktuelle Strategie trägt `ruleVersion` **2.1.0**. Schwellen, Regelreihenfolge und Rule-IDs werden dort zentral definiert und getestet.
+
+n8n enthält bewusst **keine zweite Kopie der Business Logic**. Der optionale FRED-n8n-Workflow ruft ausschließlich die serverseitigen API-Endpunkte auf.
+
+## Markt-Daten-Pipeline
+
+Kanonischer Datenfluss:
+
+```text
+FRED (NASDAQ100 + VIXCLS)
+        ↓
+MarketSnapshot
+        ↓
+historische Signalableitung
+        ↓
+Decision Engine 2.1.0
+        ↓
+Decision
+        ↓
+Human Review
+```
+
+Die Marktdaten werden unter der Provider-Identität `fred:NASDAQ100+VIXCLS` gespeichert. NDX-Referenzhoch, Drawdown und VIX-Perzentil werden deterministisch aus persistierter Historie abgeleitet.
+
+## Portfolio-Engine-Integration
+
+Das Cockpit rekonstruiert **nicht** selbst die strategische Zielallokation. Eine vorgelagerte Portfolio-Engine erzeugt einen versionierten `portfolio-snapshot/1.0`; das Cockpit validiert, persistiert und verwendet diesen Snapshot als Portfolio-Kontext.
+
+Kanonische Grenzen:
+
+- Portfolio-Vertrag und Fingerprint: `lib/portfolio-snapshot.ts`
+- lokaler Monatslauf: `npm run run:monthly-portfolio -- <monthly-input.json>`
+- kombinierter Monatsbericht: `npm run run:monthly-decision-report -- <monthly-input.json> [hedge-context.json]`
+- HTTP-Import: `POST /api/portfolio-snapshots/import`
+- Exposure-Aggregation: `lib/exposure-mapping.ts`
+- ETF-Mapping und Nearest-Neighbour-Ranking: `lib/etf-nearest-neighbour-mapping.ts` und `lib/nearest-neighbour-ranking.ts`
+- Portfolio→Hedge-Seam: `lib/portfolio-hedge-integration.ts`
+- taktische Hedge-Regelengine: `lib/decision-engine.ts`
+
+Portfolio-Daten erzeugen keine Marktsignale und Marktsignale verändern den Portfolio-Snapshot nicht.
+
+## Browser-Monatsworkflow
+
+Der normale Monatslauf kann vollständig im Browser durchgeführt werden:
+
+1. Portfolio-Kontext erfassen bzw. importieren.
+2. ETF-Mapping prüfen und bei Bedarf Human Review durchführen.
+3. Hedge-Kontext erfassen oder aus gespeicherter Markthistorie ableiten.
+4. Decision prüfen.
+5. Monatslauf explizit menschlich abschließen.
+
+CLI- und JSON-Pfade bleiben als reproduzierbare Recovery- und Audit-Wege erhalten.
+
+## HTTP-API
+
+Für Integrationen bleiben authentifizierte Endpunkte verfügbar, unter anderem:
+
+```text
+POST /api/market-data/fred/sync
+POST /api/hedge-decisions/from-history
+POST /api/portfolio-snapshots/import
+```
+
+Sie verwenden `Authorization: Bearer <N8N_INGEST_TOKEN>` als API-Kompatibilitätstoken. Der Tokenname ist historisch; n8n ist keine Voraussetzung für die Endpunkte.
+
+`POST /api/decision` bleibt als Kompatibilitätsweg für bereits extern berechnete Decisions bestehen, ist aber nicht der bevorzugte Markt-Daten-/Decision-Pfad.
+
+## Optionales n8n
+
+Der einzige gepflegte Markt-Daten-Workflow ist:
+
+```text
+n8n/hedge-market-data-fred-workflow.json
+```
+
+Er orchestriert die vorhandenen Server-Endpunkte und implementiert **keine** eigene Hedge-Regellogik. Der frühere Yahoo-/Code-Node-Workflow wurde entfernt, um Rule-Drift zwischen n8n und der kanonischen TypeScript-Engine zu verhindern.
+
+Für neue Installationen ist n8n optional. Lokale tägliche Updates können direkt über `npm run update:market-data` beziehungsweise auf einem Server über die HTTP-API geplant werden.
 
 ## Qualitätsprüfungen
 
@@ -44,90 +184,26 @@ npm test
 npm run build
 ```
 
-Die GitHub-Action führt diese Prüfungen bei Pull Requests und Pushes auf `main` aus.
-
-## Regelengine
-
-Die kanonische, getestete Regelengine liegt in `lib/decision-engine.ts` und trägt eine explizite `ruleVersion`. Der n8n-Code in `n8n/decision-engine.js` bildet dieselben Regeln für den Workflow ab. Jeder gespeicherte Lauf kann `triggeredRules`, Datenquelle, Beobachtungszeit und einen SHA-256-Fingerprint enthalten.
-
-## Portfolio-Engine-Integration
-
-Das Cockpit übernimmt **nicht** die Rekonstruktion der strategischen Zielallokation. Die vorgelagerte Portfolio-Engine erzeugt einen versionierten `portfolio-snapshot/1.0`; das Cockpit validiert, persistiert und verwendet diesen Snapshot nur als Portfolio-Kontext für die taktische Hedge-Entscheidung.
-
-Kanonische Grenzen:
-
-- Portfolio-Vertrag und Fingerprint: `lib/portfolio-snapshot.ts`
-- lokaler Monatslauf: `npm run run:monthly-portfolio -- <monthly-input.json>`
-- kombinierter Monatsbericht: `npm run run:monthly-decision-report -- <monthly-input.json> [hedge-context.json]`
-- HTTP-Import: `POST /api/portfolio-snapshots/import`
-- Exposure-Aggregation: `lib/exposure-mapping.ts`
-- versioniertes ETF-Mapping und Nearest-Neighbour-Ranking: `lib/etf-nearest-neighbour-mapping.ts` und `lib/nearest-neighbour-ranking.ts`
-- Portfolio→Hedge-E2E-Seam: `lib/portfolio-hedge-integration.ts`
-- taktische Hedge-Regelengine: `lib/decision-engine.ts`
-
-Der monatliche Ablauf ist bewusst zweistufig:
-
-1. strategische Zielallokation und Instrument-Mapping lokal aktualisieren;
-2. Snapshot erzeugen und per SHA-256 unveränderlich referenzieren;
-3. Snapshot idempotent im Cockpit importieren;
-4. Drift, Sparrate und zusätzliche Cash-Varianten berechnen;
-5. taktische Marktsignale (`drawdownPercent`, `vixPercentile`, optional `hedgeCoveragePercent`) separat erfassen;
-6. validierten Snapshot und diese Signale über `evaluatePortfolioHedgeDecision` an die bestehende Hedge-Regelengine übergeben;
-7. Portfolio- und Hedge-Ergebnis dokumentieren und menschlich entscheiden.
-
-Portfolio-Daten erzeugen keine Marktsignale und Marktsignale verändern den Portfolio-Snapshot nicht. Ein ETF-Wechsel wird nicht allein durch eine geringfügig niedrigere TER ausgelöst. Kein Integrationspfad erzeugt automatisch Broker-Orders oder Execution Requests.
-
-## API-Ingest
-
-```bash
-curl -X POST http://localhost:3000/api/decision \
-  -H "Authorization: Bearer replace-with-a-long-random-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "observedAt": "2026-07-28T18:00:00.000Z",
-    "source": "n8n/yahoo-chart",
-    "ruleVersion": "2.0.0",
-    "triggeredRules": ["NEAR_HIGH", "VIX_CHEAP"],
-    "ndxNow": 21350.2,
-    "ndxHigh2y": 22500.8,
-    "drawdownPercent": -5.11,
-    "vixNow": 14.2,
-    "vixPercentile": 22.4,
-    "action": "BUY_OR_ROLL_PUTS",
-    "severity": "blue",
-    "recommendation": "Markt nahe Hoch und VIX niedrig: Hedge-Lücke prüfen.",
-    "portfolioMarketValueEur": 1000000,
-    "hedgeMarketValueEur": 18000,
-    "hedgeCoveragePercent": 70
-  }'
-```
-
-Erfolgreiche Requests liefern HTTP 201 und eine `requestId`. Ein bereits verwendeter `inputFingerprint` liefert HTTP 409. Fehler werden ebenfalls mit einer `requestId` versehen.
+Die GitHub-Action führt diese Prüfungen bei Pull Requests und Pushes auf `main` aus und ergänzt Runtime-, Container- und Supply-Chain-Prüfungen.
 
 ## Dashboard-Schutz
 
-Setze `DASHBOARD_BASIC_AUTH_USER` und `DASHBOARD_BASIC_AUTH_PASSWORD`, um alle Dashboard-Seiten per Basic Auth zu schützen. Der n8n-Ingest bleibt separat über den Bearer-Token abgesichert.
+Setze `DASHBOARD_BASIC_AUTH_USER` und `DASHBOARD_BASIC_AUTH_PASSWORD`, um die Dashboard-Seiten per Basic Auth zu schützen. API-Endpunkte verwenden unabhängig davon den Bearer-Token.
 
-## Hostinger Deployment
+## Server-/Hostinger-Deployment
 
-Siehe `docs/HOSTINGER_DEPLOY.md`.
+Siehe `docs/HOSTINGER_DEPLOY.md` für den aktuellen Docker-/SQLite-Pfad.
 
-## n8n
+## Sicherheit und Betrieb
 
-- Importiere `n8n/hedge-decision-workflow.json`.
-- Ersetze im Code Node den Platzhalter durch den Inhalt von `n8n/decision-engine.js`.
-- Setze die Ziel-URL auf Deine Domain.
-- Hinterlege `N8N_INGEST_TOKEN` als n8n Environment Variable oder direkt im Header.
-- Sorge dafür, dass mindestens 400 NDX- und 200 VIX-Schlusskurse verfügbar sind.
-
-## Sicherheit
-
-- Keine DB-Zugangsdaten oder Tokens committen.
-- `N8N_INGEST_TOKEN` lang und zufällig wählen.
-- Dashboard-Basisschutz im produktiven Betrieb aktivieren.
-- MySQL nicht öffentlich öffnen.
+- Keine Tokens oder Secrets committen.
+- `N8N_INGEST_TOKEN` lang und zufällig wählen, auch wenn n8n nicht verwendet wird.
+- `FRED_API_KEY` nur als Environment Variable halten.
+- Dashboard-Basisschutz bei nicht rein lokalem Betrieb aktivieren.
+- `data/hedge.db` regelmäßig sichern; für ein einfaches konsistentes Datei-Backup die App kurz stoppen.
+- Das Legacy-MariaDB-Volume erst löschen, wenn die SQLite-Migration und ein kompletter Operator-Dry-Run geprüft wurden.
 - Entscheidungen sind Empfehlungen; vor einer Transaktion ist eine menschliche Prüfung erforderlich.
 
 ## Disclaimer
 
-Dieses Projekt ist ein Entscheidungs- und Monitoring-Tool. Es ist keine Anlageberatung und führt keine Orders aus.
+Dieses Projekt ist ein persönliches Entscheidungs- und Monitoring-Tool. Es ist keine Anlageberatung und führt keine Orders aus.
