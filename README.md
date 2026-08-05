@@ -1,6 +1,6 @@
 # NASDAQ Hedge Decision Cockpit – Next.js
 
-Version **1.121.3**. Browser- und CLI-gestütztes Entscheidungs- und Monitoring-Tool für ein regelbasiertes NASDAQ-Tail-Risk-Hedge-Programm. Das Cockpit dokumentiert Markt-, Portfolio-, Mapping-, Hedge- und Review-Zustände reproduzierbar, führt aber keine Broker-Orders aus.
+Version **1.122.0**. Browser- und CLI-gestütztes Entscheidungs- und Monitoring-Tool für ein regelbasiertes NASDAQ-Tail-Risk-Hedge-Programm. Das Cockpit dokumentiert Markt-, Portfolio-, Mapping-, Hedge- und Review-Zustände reproduzierbar, führt aber keine Broker-Orders aus.
 
 ## Aktueller Stack
 
@@ -8,6 +8,7 @@ Version **1.121.3**. Browser- und CLI-gestütztes Entscheidungs- und Monitoring-
 - Chart.js
 - Prisma 6 mit SQLite
 - FRED als kanonischer Markt-Datenprovider für `NASDAQ100` und `VIXCLS`
+- automatischer Docker-Sidecar für tägliche FRED-Akquise
 - Node-Test-Runner über `tsx --test`
 - Docker Compose für den lokalen/Server-Betrieb
 - GitHub Actions mit Typecheck, Lint, Tests, Build, Runtime-Smoke-Test, Container-Scan, SBOM und Provenance
@@ -35,10 +36,25 @@ docker compose --env-file .env.docker up -d --build
 
 Dashboard: `http://localhost:3000`
 
-Der Normalbetrieb startet nur den App-Container. Die SQLite-Datenbank liegt persistent unter:
+Der Normalbetrieb startet:
+
+```text
+hedge-decision-app
+hedge-decision-fred-scheduler
+```
+
+Die SQLite-Datenbank liegt persistent unter:
 
 ```text
 data/hedge.db
+```
+
+Der Scheduler wartet auf eine gesunde App und ruft standardmäßig täglich um **22:30 Europe/Berlin** die vorhandene FRED-Sync-API auf. Er implementiert weder einen zweiten FRED-Client noch Hedge-Regeln und erzeugt keine automatische Decision.
+
+Ein sofortiger Smoke-Test ist möglich mit:
+
+```powershell
+docker compose --env-file .env.docker run --rm fred-scheduler --once
 ```
 
 MariaDB ist nur noch als opt-in `migration`-Profil für die einmalige Übernahme einer bestehenden Installation vorhanden.
@@ -46,6 +62,7 @@ MariaDB ist nur noch als opt-in `migration`-Profil für die einmalige Übernahme
 Ausführlich:
 
 - `docs/LOCAL_DOCKER.md`
+- `docs/FRED_MARKET_DATA.md`
 - `docs/SQLITE_MIGRATION.md`
 
 ## Lokal ohne Docker entwickeln
@@ -61,15 +78,15 @@ npm run dev
 
 Die lokale `.env` verwendet eine SQLite-URL wie `file:../data/hedge.db`.
 
-## Marktdaten ohne n8n aktualisieren
+## FRED-Marktdaten
 
-Der empfohlene lokale Wartungspfad läuft direkt aus dem Repository und benötigt weder n8n noch einen laufenden Next.js-Server:
+Im normalen Docker-Betrieb werden FRED-Marktdaten automatisch durch den Scheduler-Sidecar aktualisiert. Die Synchronisation nutzt das bestehende überlappende Zehn-Tage-Fenster und ist idempotent.
+
+Für Recovery, Diagnose und explizite Backfills bleibt der direkte Host-CLI-Pfad verfügbar:
 
 ```powershell
 npm run update:market-data -- --env-file .env.docker
 ```
-
-Standardmäßig werden **nur Marktdaten** synchronisiert. Der Befehl verwendet ein überlappendes Zehn-Tage-Fenster und ist idempotent.
 
 Expliziter Backfill:
 
@@ -89,7 +106,7 @@ Mit bekannter Hedge-Abdeckung:
 npm run update:market-data -- --env-file .env.docker --hedge-coverage 70
 ```
 
-Details und Scheduling-Beispiele: `docs/FRED_MARKET_DATA.md`.
+Die automatische Docker-Akquise synchronisiert bewusst **nur Marktdaten**. Details, Scheduling und Alternativen: `docs/FRED_MARKET_DATA.md`.
 
 ## Kanonische Regelengine
 
@@ -107,6 +124,10 @@ n8n enthält bewusst **keine zweite Kopie der Business Logic**. Der optionale FR
 Kanonischer Datenfluss:
 
 ```text
+Docker FRED Scheduler
+        ↓
+POST /api/market-data/fred/sync
+        ↓
 FRED (NASDAQ100 + VIXCLS)
         ↓
 MarketSnapshot
@@ -119,6 +140,8 @@ Decision
         ↓
 Human Review
 ```
+
+Der Scheduler endet bewusst bei `MarketSnapshot`; die Decision-Erzeugung ist kein Bestandteil der automatischen Datenakquise.
 
 Die Marktdaten werden unter der Provider-Identität `fred:NASDAQ100+VIXCLS` gespeichert. NDX-Referenzhoch, Drawdown und VIX-Perzentil werden deterministisch aus persistierter Historie abgeleitet.
 
@@ -161,7 +184,7 @@ POST /api/hedge-decisions/from-history
 POST /api/portfolio-snapshots/import
 ```
 
-Sie verwenden `Authorization: Bearer <N8N_INGEST_TOKEN>` als API-Kompatibilitätstoken. Der Tokenname ist historisch; n8n ist keine Voraussetzung für die Endpunkte.
+Sie verwenden `Authorization: Bearer <N8N_INGEST_TOKEN>` als API-Kompatibilitätstoken. Der Tokenname ist historisch; n8n ist keine Voraussetzung für die Endpunkte. Der Docker-FRED-Scheduler verwendet denselben Token ausschließlich für den internen Aufruf der bestehenden Sync-API.
 
 `POST /api/decision` bleibt als Kompatibilitätsweg für bereits extern berechnete Decisions bestehen, ist aber nicht der bevorzugte Markt-Daten-/Decision-Pfad.
 
@@ -175,7 +198,7 @@ n8n/hedge-market-data-fred-workflow.json
 
 Er orchestriert die vorhandenen Server-Endpunkte und implementiert **keine** eigene Hedge-Regellogik. Der frühere Yahoo-/Code-Node-Workflow wurde entfernt, um Rule-Drift zwischen n8n und der kanonischen TypeScript-Engine zu verhindern.
 
-Für neue Installationen ist n8n optional. Lokale tägliche Updates können direkt über `npm run update:market-data` beziehungsweise auf einem Server über die HTTP-API geplant werden.
+Für neue Docker-Installationen ist n8n für die Marktdaten-Automatisierung nicht erforderlich.
 
 ## Qualitätsprüfungen
 
@@ -200,11 +223,10 @@ Siehe `docs/HOSTINGER_DEPLOY.md` für den aktuellen Docker-/SQLite-Pfad.
 
 - Keine Tokens oder Secrets committen.
 - `N8N_INGEST_TOKEN` lang und zufällig wählen, auch wenn n8n nicht verwendet wird.
-- `FRED_API_KEY` nur als Environment Variable halten.
+- `FRED_API_KEY` nur als Environment Variable im App-Container halten; der Scheduler benötigt den Key nicht direkt.
 - Dashboard-Basisschutz bei nicht rein lokalem Betrieb aktivieren.
-- `data/hedge.db` regelmäßig sichern; für ein einfaches konsistentes Datei-Backup die App kurz stoppen.
+- `data/hedge.db` regelmäßig sichern; für ein einfaches konsistentes Datei-Backup App und Scheduler kurz stoppen.
 - Lokale Migrationsexporte unter `backup/` bleiben unversioniert und dürfen nicht ins Repository gelangen.
-- Das Legacy-MariaDB-Volume erst löschen, wenn die SQLite-Migration und ein kompletter Operator-Dry-Run geprüft wurden.
 - Entscheidungen sind Empfehlungen; vor einer Transaktion ist eine menschliche Prüfung erforderlich.
 
 ## Disclaimer
