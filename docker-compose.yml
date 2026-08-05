@@ -44,6 +44,8 @@ services:
       - ./data:/app/data
     entrypoint:
       - ./fred-scheduler.sh
+    healthcheck:
+      disable: true
 
   legacy-db:
     profiles: ["migration"]
