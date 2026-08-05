@@ -1,6 +1,6 @@
 # NASDAQ Hedge Decision Cockpit – Next.js
 
-Version **1.121.2**. Browser- und CLI-gestütztes Entscheidungs- und Monitoring-Tool für ein regelbasiertes NASDAQ-Tail-Risk-Hedge-Programm. Das Cockpit dokumentiert Markt-, Portfolio-, Mapping-, Hedge- und Review-Zustände reproduzierbar, führt aber keine Broker-Orders aus.
+Version **1.121.3**. Browser- und CLI-gestütztes Entscheidungs- und Monitoring-Tool für ein regelbasiertes NASDAQ-Tail-Risk-Hedge-Programm. Das Cockpit dokumentiert Markt-, Portfolio-, Mapping-, Hedge- und Review-Zustände reproduzierbar, führt aber keine Broker-Orders aus.
 
 ## Aktueller Stack
 
@@ -22,6 +22,8 @@ Das Cockpit trennt bewusst vier Verantwortlichkeiten:
 4. **Human Review** – Mapping-Review, Decision-Review und expliziter Abschluss eines Monatslaufs.
 
 Es gibt keine automatische ETF-Umschaltung, keine Broker-Order und keine automatische Execution Request.
+
+Die UI trennt die **primäre Strategiestufe** von der Volatilitätsbewertung. Die Hauptskala lautet **Blau → Grün → Gelb → Amber → Orange → Rot**. `VIX_EXPENSIVE` wird zusätzlich als separates **VIX-teuer-Overlay** angezeigt und verändert die primäre Drawdown-Farbe nicht. Diese Darstellungslogik ändert keine Schwellen, Actions oder die kanonische `ruleVersion` 2.1.0.
 
 ## Lokal mit Docker starten
 
@@ -201,6 +203,7 @@ Siehe `docs/HOSTINGER_DEPLOY.md` für den aktuellen Docker-/SQLite-Pfad.
 - `FRED_API_KEY` nur als Environment Variable halten.
 - Dashboard-Basisschutz bei nicht rein lokalem Betrieb aktivieren.
 - `data/hedge.db` regelmäßig sichern; für ein einfaches konsistentes Datei-Backup die App kurz stoppen.
+- Lokale Migrationsexporte unter `backup/` bleiben unversioniert und dürfen nicht ins Repository gelangen.
 - Das Legacy-MariaDB-Volume erst löschen, wenn die SQLite-Migration und ein kompletter Operator-Dry-Run geprüft wurden.
 - Entscheidungen sind Empfehlungen; vor einer Transaktion ist eine menschliche Prüfung erforderlich.
 
