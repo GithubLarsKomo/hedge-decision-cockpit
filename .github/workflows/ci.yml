@@ -72,6 +72,36 @@ jobs:
           if-no-files-found: ignore
       - name: Build production container
         run: docker build --tag hedge-decision-cockpit:ci .
+      - name: FRED scheduler smoke test
+        shell: bash
+        run: |
+          node scripts/fred-scheduler-smoke-server.mjs >fred-scheduler-smoke.log 2>&1 &
+          stub_pid=$!
+          trap 'kill "$stub_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3200/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.25
+          done
+          curl -fsS http://127.0.0.1:3200/health >/dev/null
+          output="$(docker run --rm \
+            --network host \
+            --entrypoint ./fred-scheduler.sh \
+            --env N8N_INGEST_TOKEN=test-token-for-ci \
+            --env FRED_SYNC_URL=http://127.0.0.1:3200/api/market-data/fred/sync \
+            hedge-decision-cockpit:ci \
+            --once)"
+          printf '%s\n' "$output"
+          grep -q 'FRED sync succeeded' <<<"$output"
+          grep -q '"inserted":0' <<<"$output"
+      - name: Upload FRED scheduler smoke log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fred-scheduler-smoke-log
+          path: fred-scheduler-smoke.log
+          if-no-files-found: ignore
       - name: Scan production container
         uses: aquasecurity/trivy-action@v0.36.0
         with:
