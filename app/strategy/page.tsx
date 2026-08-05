@@ -43,13 +43,13 @@ export default function StrategyGuidePage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-slate-950">3. Der Ablauf der Strategie</h2>
         <div className="mt-5 space-y-4">
-          <Step badge="Blau" title="Absicherung aufbauen oder rollen" text={`Wenn der NDX weniger als ${pct(Math.abs(config.nearHighPercent))} % unter seinem 2-Jahres-Hoch liegt, der VIX unter dem ${pct(config.cheapVolatilityPercentile)}. Perzentil liegt und die gemeldete Hedge-Abdeckung unter ${pct(config.targetHedgeCoveragePercent)} % liegt, ist das typische Aufbau-Setup erreicht.`} />
-          <Step badge="Grün" title="Nichts ändern" text="Wenn keine Aktionsregel greift, bleibt die vorhandene Struktur unverändert. Grün bedeutet also nicht „Markt sicher“, sondern lediglich „laut Regelwerk aktuell keine Änderung nötig“." />
-          <Step badge="Orange" title="Keine teuren neuen Puts kaufen" text={`Liegt das VIX-Perzentil über ${pct(config.expensiveVolatilityPercentile)} %, gelten neue Puts als historisch teuer. Außer bei den vorrangigen Crash-Regeln wird dann kein neuer Hedge aufgebaut.`} />
-          <Step badge="Gelb / Orange" title="Hedge in der Korrektur arbeiten lassen" text={`Ab ${pct(Math.abs(config.drawdownHoldPercent))} % Drawdown soll der bestehende Hedge gehalten werden. Ist Volatilität zusätzlich sehr teuer, wird das Signal orange.`} />
-          <Step badge="Gelb" title="Erste Hedge-Gewinne realisieren" text={`Ab ${pct(Math.abs(config.drawdownRealizeFirstPercent))} % Drawdown sieht die Strategie vor, 25 % der Hedge-Gewinne zu realisieren.`} />
-          <Step badge="Orange" title="Weitere Gewinne freisetzen" text={`Ab ${pct(Math.abs(config.drawdownRealizeSecondPercent))} % Drawdown werden laut Regelwerk weitere 35 % realisiert.`} />
-          <Step badge="Rot" title="Im extremen Drawdown Großteil monetarisieren" text={`Ab ${pct(Math.abs(config.drawdownCloseMostPercent))} % Drawdown soll der Großteil des Hedges geschlossen und die freigesetzte Liquidität nach dem Reinvestitionsplan für Aktienkäufe eingesetzt werden.`} />
+          <Step badge="Blau" badgeColor="blue" title="Absicherung aufbauen oder rollen" text={`Wenn der NDX weniger als ${pct(Math.abs(config.nearHighPercent))} % unter seinem 2-Jahres-Hoch liegt, der VIX unter dem ${pct(config.cheapVolatilityPercentile)}. Perzentil liegt und die gemeldete Hedge-Abdeckung unter ${pct(config.targetHedgeCoveragePercent)} % liegt, ist das typische Aufbau-Setup erreicht.`} />
+          <Step badge="Grün" badgeColor="green" title="Nichts ändern" text="Wenn keine Aktionsregel greift, bleibt die vorhandene Struktur unverändert. Grün bedeutet also nicht „Markt sicher“, sondern lediglich „laut Regelwerk aktuell keine Änderung nötig“." />
+          <Step badge="Orange" badgeColor="orange" title="Keine teuren neuen Puts kaufen" text={`Liegt das VIX-Perzentil über ${pct(config.expensiveVolatilityPercentile)} %, gelten neue Puts als historisch teuer. Außer bei den vorrangigen Crash-Regeln wird dann kein neuer Hedge aufgebaut.`} />
+          <Step badge="Gelb / Orange" badgeColor="yellow" title="Hedge in der Korrektur arbeiten lassen" text={`Ab ${pct(Math.abs(config.drawdownHoldPercent))} % Drawdown soll der bestehende Hedge gehalten werden. Ist Volatilität zusätzlich sehr teuer, wird das Signal orange.`} />
+          <Step badge="Gelb" badgeColor="yellow" title="Erste Hedge-Gewinne realisieren" text={`Ab ${pct(Math.abs(config.drawdownRealizeFirstPercent))} % Drawdown sieht die Strategie vor, 25 % der Hedge-Gewinne zu realisieren.`} />
+          <Step badge="Orange" badgeColor="orange" title="Weitere Gewinne freisetzen" text={`Ab ${pct(Math.abs(config.drawdownRealizeSecondPercent))} % Drawdown werden laut Regelwerk weitere 35 % realisiert.`} />
+          <Step badge="Rot" badgeColor="red" title="Im extremen Drawdown Großteil monetarisieren" text={`Ab ${pct(Math.abs(config.drawdownCloseMostPercent))} % Drawdown soll der Großteil des Hedges geschlossen und die freigesetzte Liquidität nach dem Reinvestitionsplan für Aktienkäufe eingesetzt werden.`} />
         </div>
       </section>
 
@@ -95,11 +95,20 @@ function Concept({ title, text }: { title: string; text: string }) {
   );
 }
 
-function Step({ badge, title, text }: { badge: string; title: string; text: string }) {
+type BadgeColor = "blue" | "green" | "yellow" | "red" | "orange";
+const badgeColorClasses: Record<BadgeColor, string> = {
+  blue: "bg-blue-100 text-blue-800",
+  green: "bg-green-100 text-green-800",
+  orange: "bg-orange-100 text-orange-800",
+  yellow: "bg-yellow-100 text-yellow-800",
+  red: "bg-red-100 text-red-800",
+};
+
+function Step({ badge, badgeColor, title, text }: { badge: string; badgeColor?: BadgeColor; title: string; text: string }) {
   return (
     <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-sm">{badge}</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide shadow-sm ${badgeColor ? badgeColorClasses[badgeColor] ?? "bg-white text-slate-600" : "bg-white text-slate-600"}`}>{badge}</span>
         <h3 className="font-semibold text-slate-950">{title}</h3>
       </div>
       <p className="mt-2 text-sm leading-6 text-slate-700">{text}</p>
