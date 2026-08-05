@@ -7,6 +7,7 @@ import ExecutionAuditForm from './ExecutionAuditForm';
 import ExecutionAuditHistory from './ExecutionAuditHistory';
 import HistoryChart from './HistoryChart';
 import HistoryTable from './HistoryTable';
+import StrategyColorLegend from './StrategyColorLegend';
 
 export type ExecutionAuditRow = {
   approvalDecision: string;
@@ -57,6 +58,10 @@ export default function Dashboard({ decisions }: { decisions: DecisionRow[] }) {
         <Link href="/strategy" className="mt-4 inline-flex rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50">
           Strategie für Einsteiger verstehen →
         </Link>
+        <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Strategie-Farblogik</p>
+          <StrategyColorLegend compact />
+        </div>
       </header>
 
       {latest ? <DecisionCard decision={latest} /> : (
